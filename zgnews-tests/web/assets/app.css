@@ -73,8 +73,10 @@ h1{font:600 30px/1.15 var(--sans);letter-spacing:-.02em;margin:0}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .input,select{border:1px solid var(--line-strong);background:var(--surface);border-radius:var(--radius);padding:8px 10px;font-size:12.5px;color:var(--ink)}
 .input{min-width:230px}
+.input.grow{flex:1;min-width:260px}
 .input::placeholder{color:var(--muted)}
 .input:hover,select:hover{border-color:var(--ink)}
+mark{background:var(--highlight);color:var(--ink);padding:0}
 .spacer{flex:1}
 
 /* kpi strip */
@@ -86,6 +88,10 @@ h1{font:600 30px/1.15 var(--sans);letter-spacing:-.02em;margin:0}
 .kpi .v{font:600 30px/1.1 var(--sans);letter-spacing:-.025em;font-variant-numeric:tabular-nums;margin-top:6px;color:var(--ink)}
 .kpi .h{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.45}
 .kpi .h a{text-decoration:underline;text-underline-offset:2px}
+.kpi.clickable{cursor:pointer;transition:background .12s}
+.kpi.clickable:hover{background:var(--surface-2)}
+.kpi.clickable.active{background:var(--highlight)}
+.kpi.clickable.active .v{color:var(--ink)}
 
 /* cards */
 .grid-2{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px}
@@ -122,18 +128,37 @@ td.mono,.mono{font-variant-numeric:tabular-nums}
 .chip.p1{color:var(--amber);border-color:var(--amber)}
 .chip.p2{color:var(--navy);border-color:var(--line-strong)}
 .chip.tag{color:var(--muted)}
+.chip.file{font:10px/1.7 var(--mono);letter-spacing:0}
+
+/* 标签 chips 筛选 */
+.chips-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chips-label{font-size:11px;color:var(--muted);white-space:nowrap}
+.chips{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.chipbtn{border:1px solid var(--line-strong);background:var(--surface);border-radius:var(--radius);padding:3px 8px;font-size:11px;line-height:1.6;color:var(--muted);cursor:pointer;font-family:inherit}
+.chipbtn:hover{border-color:var(--ink);color:var(--ink)}
+.chipbtn.active{background:var(--highlight);border-color:var(--ink);color:var(--ink);font-weight:600}
+.chipbtn .n{font-variant-numeric:tabular-nums;opacity:.75}
 
 /* case list */
-.group{margin-bottom:18px}
-.group-title{font-size:11.5px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:2px}
-.case-grid{display:block}
-.case{display:grid;grid-template-columns:18px 1fr;gap:10px;align-items:start;padding:10px 8px;border-bottom:1px solid var(--line);cursor:pointer}
+/* 按测试域分组 + 多列卡片 */
+.area-group{margin-bottom:16px}
+.area-head{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--ink);padding:5px 2px 7px}
+.area-toggle{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;cursor:pointer;font:600 13px/1.4 var(--sans);color:var(--ink);padding:2px 4px;text-align:left}
+.area-toggle:hover{text-decoration:underline;text-underline-offset:3px}
+.area-toggle .caret{color:var(--muted);transition:transform .12s;font-size:11px}
+.area-group.collapsed .caret{transform:rotate(-90deg)}
+.area-toggle .cnt{font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums}
+.g-check{display:inline-flex;gap:5px;align-items:center;font-size:11px;color:var(--muted);cursor:pointer;margin-left:auto}
+.g-check input{accent-color:var(--navy)}
+.area-body{padding-top:8px}
+.case-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.case{display:grid;grid-template-columns:18px 1fr;gap:10px;align-items:start;padding:9px 10px;background:var(--surface);cursor:pointer}
 .case:hover{background:#fff8cc}
 .case input{margin:3px 0 0;accent-color:var(--navy)}
-.case .nm{font-size:13px;font-weight:600;line-height:1.4}
-.case .ds{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5}
+.case .nm{font-size:12.5px;font-weight:600;line-height:1.45}
+.case .ds{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.5}
 .case .meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
-.case .node{font:10.5px/1.4 var(--mono);color:var(--muted);margin-top:5px;word-break:break-all}
+.case .node{font:10px/1.4 var(--mono);color:var(--muted);margin-top:5px;word-break:break-all}
 
 /* console */
 pre.console{margin:0;background:#101820;color:#d9e2e8;border:1px solid #101820;border-radius:var(--radius);padding:14px;min-height:230px;max-height:380px;overflow:auto;font:11.5px/1.65 var(--mono);white-space:pre-wrap}

@@ -5,71 +5,172 @@
 <div class="page-head">
   <div>
     <h1>用例库</h1>
-    <p class="sub">Python 文件即用例；平台自动发现，按测试域分组。勾选后在“运行与日志”查看过程。</p>
+    <p class="sub">Python 文件即用例，平台自动发现。按测试域分组；点顶栏计数按优先级筛选，点标签 chips 多选，输入即搜。勾选后在“运行与日志”查看过程。</p>
   </div>
   <div class="head-actions">
     <button class="btn" id="refreshCases">刷新用例</button>
     <a class="btn primary" href="/runs">运行与日志</a>
   </div>
 </div>
+
+<div class="kpis" id="prioStats">
+  <div class="kpi clickable active" data-p="all"><span class="k">用例总数</span><span class="v" id="stAll">-</span><span class="h" id="stMatch">当前匹配全部</span></div>
+  <div class="kpi clickable" data-p="P0"><span class="k">P0 冒烟</span><span class="v" id="stP0">-</span><span class="h">点击只看 P0</span></div>
+  <div class="kpi clickable" data-p="P1"><span class="k">P1 常规</span><span class="v" id="stP1">-</span><span class="h">点击只看 P1</span></div>
+  <div class="kpi clickable" data-p="P2"><span class="k">P2 补充</span><span class="v" id="stP2">-</span><span class="h">点击只看 P2</span></div>
+  <div class="kpi"><span class="k">已知问题</span><span class="v" id="stKnown">-</span><span class="h"><a href="/defects">打开缺陷页</a></span></div>
+</div>
+
 <div class="toolbar">
-  <input class="input" id="q" aria-label="搜索用例" placeholder="搜索名称、文件或标签">
-  <select id="priority" aria-label="按优先级筛选"><option value="all">全部优先级</option><option value="P0">P0</option><option value="P1">P1</option><option value="P2">P2</option></select>
-  <select id="tag" aria-label="按标签筛选"><option value="all">全部标签</option></select>
+  <input class="input grow" id="q" aria-label="搜索用例" placeholder="搜索名称、描述、文件、标签，如：播放 / hls / 软404">
+  <select id="area" aria-label="按测试域筛选"><option value="all">全部测试域</option></select>
   <span class="spacer"></span>
   <label class="note" style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="headed"> 显示浏览器</label>
   <select id="slowmo" aria-label="慢动作速度"><option value="0">正常速度</option><option value="300" selected>慢动作 300ms</option><option value="700">慢动作 700ms</option></select>
-  <button class="btn" id="checkAll">全选</button>
+  <button class="btn" id="collapseAll">全部折叠</button>
+  <button class="btn" id="expandAll">全部展开</button>
+  <button class="btn" id="checkAll">全选匹配</button>
   <button class="btn" id="clearAll">清空</button>
-  <button class="btn primary" id="runSelected">运行选中</button>
+  <button class="btn primary" id="runSelected">运行选中（<span id="selN">0</span>）</button>
 </div>
+
+<div class="chips-row">
+  <span class="chips-label">标签</span>
+  <div class="chips" id="tagChips" role="group" aria-label="标签筛选，可多选"></div>
+  <button class="btn ghost" id="clearTags">清除标签</button>
+  <span class="spacer"></span>
+  <span class="note" id="resultNote"></span>
+</div>
+
 <div id="caseList"></div>
 {% endblock %}
 {% block scripts %}
 <script>
 let cases = [];
+let prioFilter = 'all';
+let tagSel = new Set();
+const collapsed = new Set(JSON.parse(sessionStorage.getItem('zg.cases.collapsed') || '[]'));
+
 function filtered() {
-  const q = $('q').value.trim().toLowerCase(), p = $('priority').value, t = $('tag').value;
+  const q = $('q').value.trim().toLowerCase(), a = $('area').value;
   return cases.filter(c => {
-    const text = `${c.name} ${c.desc} ${c.file} ${c.func} ${(c.tags||[]).join(' ')}`.toLowerCase();
-    return (!q || text.includes(q)) && (p === 'all' || c.priority === p) && (t === 'all' || (c.tags||[]).includes(t));
+    const text = `${c.name} ${c.desc} ${c.file} ${c.func} ${c.area} ${(c.tags||[]).join(' ')}`.toLowerCase();
+    if (q && !text.includes(q)) return false;
+    if (prioFilter !== 'all' && c.priority !== prioFilter) return false;
+    if (a !== 'all' && (c.area || '其他') !== a) return false;
+    if (tagSel.size && !(c.tags||[]).some(t => tagSel.has(t))) return false;
+    return true;
   });
 }
-function render() {
-  const groups = {};
-  filtered().forEach(c => (groups[c.file] ||= []).push(c));
-  $('caseList').innerHTML = Object.entries(groups).map(([file, items]) => `
-    <div class="group">
-      <div class="group-title">${esc(file)}（${items.length}）</div>
-      <div class="case-grid">${items.map(c => `<label class="case">
-        <input type="checkbox" value="${esc(c.id)}" checked>
-        <div style="min-width:0"><div class="nm">${esc(c.name)}</div><div class="ds">${esc(c.desc)}</div>
-        <div class="meta">${chips(c)}<span class="chip">${esc(c.area||'')}</span></div>
-        <div class="node">${esc(c.id)}</div></div></label>`).join('')}</div>
-    </div>`).join('') || '<div class="empty">没有匹配用例</div>';
+function hl(text) {
+  const s = String(text ?? ''), q = $('q').value.trim().toLowerCase();
+  if (!q) return esc(s);
+  const i = s.toLowerCase().indexOf(q);
+  if (i < 0) return esc(s);
+  return esc(s.slice(0, i)) + '<mark>' + esc(s.slice(i, i + q.length)) + '</mark>' + esc(s.slice(i + q.length));
 }
-async function load(refresh=false) {
-  cases = await getCases(refresh);
-  const tags = [...new Set(cases.flatMap(c => c.tags||[]))].sort();
-  $('tag').innerHTML = '<option value="all">全部标签</option>' + tags.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+function prioIdx(p) { return p === 'P0' ? 0 : p === 'P1' ? 1 : 2; }
+function selCount() { return document.querySelectorAll('.case input:checked').length; }
+function updSel() { $('selN').textContent = selCount(); }
+function saveCollapsed() { sessionStorage.setItem('zg.cases.collapsed', JSON.stringify([...collapsed])); }
+
+function render() {
+  const list = filtered();
+  const byArea = {};
+  list.forEach(c => (byArea[c.area || '其他'] ||= []).push(c));
+  const areas = Object.entries(byArea).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  $('caseList').innerHTML = areas.map(([area, items]) => {
+    items.sort((a, b) => prioIdx(a.priority) - prioIdx(b.priority) || a.name.localeCompare(b.name));
+    const isCol = collapsed.has(area);
+    const cards = items.map(c => `<label class="case"><input type="checkbox" value="${esc(c.id)}" checked>
+      <div style="min-width:0"><div class="nm">${hl(c.name)}</div><div class="ds">${hl(c.desc)}</div>
+      <div class="meta">${chips(c)}<span class="chip file">${esc(c.file.split('/').pop())}</span></div>
+      <div class="node">${esc(c.func)}</div></div></label>`).join('');
+    const allChecked = items.every(c => true); /* 渲染时默认全选，后续由 change 事件维护 */
+    return `<div class="area-group ${isCol ? 'collapsed' : ''}" data-area="${esc(area)}">
+      <div class="area-head">
+        <button class="area-toggle" aria-expanded="${!isCol}"><span class="caret" aria-hidden="true">▾</span>${esc(area)}<b class="cnt">${items.length}</b></button>
+        <label class="g-check"><input type="checkbox" class="gc" ${allChecked ? 'checked' : ''}> 本组</label>
+      </div>
+      <div class="area-body"><div class="case-grid">${cards}</div></div>
+    </div>`;
+  }).join('') || '<div class="empty">没有匹配用例，换个关键词或清除筛选</div>';
+  $('resultNote').textContent = `匹配 ${list.length} / ${cases.length}`;
+  $('stMatch').textContent = prioFilter !== 'all' || $('area').value !== 'all' || tagSel.size || $('q').value ? '当前已筛选' : '当前匹配全部';
+  updSel();
+}
+
+function renderTags() {
+  const counts = {};
+  cases.forEach(c => (c.tags || []).forEach(t => counts[t] = (counts[t] || 0) + 1));
+  $('tagChips').innerHTML = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([t, n]) => `<button class="chipbtn ${tagSel.has(t) ? 'active' : ''}" data-tag="${esc(t)}" aria-pressed="${tagSel.has(t)}">${esc(t)}<span class="n"> ${n}</span></button>`).join('');
+}
+function refreshStats() {
+  const c = (p) => cases.filter(x => x.priority === p).length;
+  $('stAll').textContent = cases.length;
+  $('stP0').textContent = c('P0'); $('stP1').textContent = c('P1'); $('stP2').textContent = c('P2');
+  $('stKnown').textContent = cases.filter(x => (x.tags || []).includes('known')).length;
+}
+function applyPrio(p) {
+  prioFilter = p;
+  document.querySelectorAll('#prioStats .kpi').forEach(k => k.classList.toggle('active', k.dataset.p === p));
   render();
+}
+
+async function load(refresh = false) {
+  cases = await getCases(refresh);
+  const areas = [...new Set(cases.map(c => c.area || '其他'))].sort((a, b) => a.localeCompare(b));
+  $('area').innerHTML = '<option value="all">全部测试域</option>' + areas.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  refreshStats(); renderTags(); render();
   toast(`已加载 ${cases.length} 条用例`);
 }
+
 $('runSelected').onclick = async () => {
   const ids = selectedIds();
   if (!ids.length) return toast('请先勾选用例');
   try {
     await runCases(ids, {headed: $('headed').checked, slowmo: Number($('slowmo').value)});
-    toast('已启动，正在跳转运行日志');
+    toast(`已启动 ${ids.length} 条，正在跳转运行日志`);
     setTimeout(() => location.href = '/runs', 500);
   } catch (e) { toast(e.message); }
 };
 $('refreshCases').onclick = () => load(true);
 $('q').oninput = render;
-$('priority').onchange = render;
-$('tag').onchange = render;
-$('checkAll').onclick = () => document.querySelectorAll('.case input').forEach(i => i.checked = true);
-$('clearAll').onclick = () => document.querySelectorAll('.case input').forEach(i => i.checked = false);
+$('area').onchange = render;
+$('checkAll').onclick = () => { document.querySelectorAll('.case input').forEach(i => i.checked = true); updSel(); };
+$('clearAll').onclick = () => { document.querySelectorAll('.case input').forEach(i => i.checked = false); updSel(); };
+$('collapseAll').onclick = () => {
+  document.querySelectorAll('.area-group').forEach(g => { g.classList.add('collapsed'); g.querySelector('.area-toggle').setAttribute('aria-expanded', 'false'); collapsed.add(g.dataset.area); });
+  saveCollapsed();
+};
+$('expandAll').onclick = () => {
+  document.querySelectorAll('.area-group').forEach(g => { g.classList.remove('collapsed'); g.querySelector('.area-toggle').setAttribute('aria-expanded', 'true'); collapsed.clear(); });
+  saveCollapsed();
+};
+$('clearTags').onclick = () => { tagSel.clear(); renderTags(); render(); };
+$('prioStats').onclick = (e) => { const k = e.target.closest('.kpi.clickable'); if (k) applyPrio(k.dataset.p); };
+$('tagChips').onclick = (e) => {
+  const b = e.target.closest('.chipbtn');
+  if (!b) return;
+  tagSel.has(b.dataset.tag) ? tagSel.delete(b.dataset.tag) : tagSel.add(b.dataset.tag);
+  renderTags(); render();
+};
+$('caseList').addEventListener('change', (e) => {
+  if (e.target.classList.contains('gc')) {
+    const g = e.target.closest('.area-group');
+    g.querySelectorAll('.case input').forEach(i => i.checked = e.target.checked);
+  }
+  updSel();
+});
+$('caseList').addEventListener('click', (e) => {
+  const t = e.target.closest('.area-toggle');
+  if (!t) return;
+  const g = t.closest('.area-group'), isCol = g.classList.toggle('collapsed');
+  t.setAttribute('aria-expanded', !isCol);
+  isCol ? collapsed.add(g.dataset.area) : collapsed.delete(g.dataset.area);
+  saveCollapsed();
+});
 load();
 </script>
 {% endblock %}
