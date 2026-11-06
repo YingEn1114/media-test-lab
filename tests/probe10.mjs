@@ -1,0 +1,17 @@
+import { chromium } from '@playwright/test';
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'] });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.goto('http://localhost/accounts/login/', { waitUntil: 'networkidle' });
+await page.locator('#id_login').fill('admin');
+await page.locator('#id_password').fill('MediaCMS@123');
+await page.getByRole('button', { name: 'Sign In' }).click();
+await page.waitForLoadState('networkidle');
+await page.goto('http://localhost/view?m=juMSnf8VT', { waitUntil: 'networkidle' });
+await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+await page.waitForTimeout(800);
+console.log('textareas', await page.locator('textarea').count());
+await page.locator('textarea').first().fill('E2E 评论 probe ' + Date.now());
+const buttons = page.getByRole('button', { name: '提交' });
+console.log('submit count', await buttons.count());
+for (let i=0;i<await buttons.count();i++) console.log(i, 'visible', await buttons.nth(i).isVisible(), 'enabled', await buttons.nth(i).isEnabled());
+await browser.close();

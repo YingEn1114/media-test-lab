@@ -1,0 +1,33 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# Node
+node_modules/
+
+# 本地工具链（可重新下载）
+zgnews-tests/.tools/
+
+# 运行时数据 / 日志 / 数据库
+postgres_data/
+*.log
+*.db
+*.db-shm
+*.db-wal
+
+# 测试产物（可重新生成）
+tests/playwright-report/
+tests/screenshots/
+tests/results.xml
+zgnews-tests/reports/
+zgnews-tests/screenshots/
+zgnews-tests/allure-results/
+
+# mediacms 上游 git 历史本地备份（不提交）
+mediacms/.git-upstream/

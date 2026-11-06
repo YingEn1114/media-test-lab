@@ -1,0 +1,20 @@
+import { chromium } from '@playwright/test';
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'] });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.goto('http://localhost/view?m=juMSnf8VT', { waitUntil: 'networkidle' });
+await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+await page.waitForTimeout(1000);
+console.log('ANON textareas', await page.locator('textarea').count(), 'contenteditable', await page.locator('[contenteditable="true"]').count());
+console.log('ANON TAIL:', (await page.locator('body').innerText()).slice(-300).replace(/\n/g,' | '));
+
+await page.goto('http://localhost/accounts/login/', { waitUntil: 'networkidle' });
+await page.locator('#id_login').fill('admin');
+await page.locator('#id_password').fill('MediaCMS@123');
+await page.getByRole('button', { name: 'Sign In' }).click();
+await page.waitForLoadState('networkidle');
+await page.goto('http://localhost/view?m=juMSnf8VT', { waitUntil: 'networkidle' });
+await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+await page.waitForTimeout(1000);
+console.log('AUTH textareas', await page.locator('textarea').count(), 'contenteditable', await page.locator('[contenteditable="true"]').count());
+console.log('AUTH TAIL:', (await page.locator('body').innerText()).slice(-300).replace(/\n/g,' | '));
+await browser.close();

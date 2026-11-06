@@ -1,0 +1,28 @@
+{
+    "presets": [
+        ["@babel/react", { "runtime": "automatic" }],
+        [
+            "@babel/env",
+            {
+                "modules": false,
+                "useBuiltIns": "usage",
+                "corejs": "3.50",
+                "targets": {
+                    "browsers": ["defaults"]
+                }
+            }
+        ]
+    ],
+    "env": {
+        "test": {
+            "presets": [
+                [
+                    "@babel/env",
+                    {
+                        "targets": { "node": "current" }
+                    }
+                ]
+            ]
+        }
+    }
+}

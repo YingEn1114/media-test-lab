@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+<!-- avoid-ai-design-ignore-file: K7 · focus-visible 由 /assets/app.css 统一提供，扫描器按单文件检查无法看到外链样式 -->
+{% block title %}运行与日志{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>运行与日志</h1>
+    <p class="sub">实时查看 pytest 输出；结束后同时生成 pytest HTML 与 Allure 报告。冒烟运行只跑 8 条核心用例，约 20–40 秒。</p>
+  </div>
+  <div class="head-actions">
+    <button class="btn" id="runSmoke">冒烟运行</button>
+    <button class="btn" id="runAll">运行全部</button>
+    <button class="btn" id="cancel" disabled>取消运行</button>
+  </div>
+</div>
+
+<section class="card" style="margin-bottom:14px">
+  <div class="card-head console-head">
+    <h2>执行控制台</h2>
+    <span id="status" class="badge idle">idle</span>
+    <span class="spacer"></span>
+    <span class="hint" id="duration"></span>
+    <span id="report"></span>
+    <span id="allure"></span>
+  </div>
+  <div class="progress" id="progress"><div class="bar"></div></div>
+  <pre class="console" id="log">点击“运行全部”，或到用例库勾选运行。</pre>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>运行历史</h2><button class="btn" id="reloadHistory">刷新</button></div>
+  <table><thead><tr><th>时间</th><th>状态</th><th>用例</th><th>耗时</th><th>HTML</th><th>Allure</th></tr></thead>
+  <tbody id="history"></tbody></table>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+let polling = false;
+function setRunning(running) {
+  $('runAll').disabled = running;
+  $('runSmoke').disabled = running;
+  $('cancel').disabled = !running;
+  $('progress').className = 'progress' + (running ? ' running' : '');
+}
+function paint(s) {
+  $('status').textContent = s.status;
+  $('status').className = 'badge ' + s.status;
+  $('log').textContent = s.log || '(暂无输出)';
+  $('log').scrollTop = $('log').scrollHeight;
+  $('duration').textContent = s.duration ? s.duration + 's' : '';
+  $('report').innerHTML = s.report ? `<a href="${s.report}" target="_blank">HTML 报告</a>` : '';
+  $('allure').innerHTML = s.allure ? `<a href="${s.allure}" target="_blank">Allure 报告</a>` : '';
+  setRunning(s.status === 'running');
+  if (s.status !== 'running' && polling) { polling = false; loadHistory(); }
+}
+async function startPolling() {
+  if (polling) return;
+  polling = true;
+  const s = await getStatus();
+  paint(s);
+  if (s.status !== 'running') { polling = false; return; }
+  const timer = setInterval(async () => {
+    const st = await getStatus();
+    paint(st);
+    if (st.status !== 'running') { clearInterval(timer); polling = false; }
+  }, 1000);
+}
+async function loadHistory() { renderRuns(await getHistory(), $('history')); }
+$('runAll').onclick = async () => {
+  try {
+    const cases = await getCases();
+    await runCases(cases.map(c => c.id));
+    toast('已启动全量运行');
+    startPolling();
+  } catch (e) { toast(e.message); }
+};
+$('runSmoke').onclick = async () => {
+  try {
+    const r = await runCases([], {tags: ['smoke']});
+    toast(`已启动冒烟（${r.count} 条）`);
+    startPolling();
+  } catch (e) { toast(e.message); }
+};
+$('cancel').onclick = async () => {
+  try { await cancelRun(); toast('已发送取消'); } catch (e) { toast(e.message); }
+};
+$('reloadHistory').onclick = loadHistory;
+loadHistory();
+startPolling();
+</script>
+{% endblock %}

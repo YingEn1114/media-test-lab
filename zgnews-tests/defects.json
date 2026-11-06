@@ -1,0 +1,149 @@
+{
+  "generatedAt": "2026-11-06",
+  "source": "自动化回归（Playwright + requests）",
+  "note": "对应测试套件中的 5 条 xfail；修复后删除 pytest.xfail(...) 即恢复为正常门禁。",
+  "items": [
+    {
+      "id": "DEF-01",
+      "caseId": "A06",
+      "title": "站内搜索被重定向到客户端下载页",
+      "priority": "P1",
+      "severity": "高",
+      "status": "待修复",
+      "owner": "待指派",
+      "target": "待排期（建议本迭代）",
+      "component": "搜索 / 路由",
+      "environment": "线上 www.zhengguannews.cn",
+      "firstSeen": "2026-11-04",
+      "lastChecked": "2026-11-06",
+      "steps": [
+        "打开 https://www.zhengguannews.cn/search.html/正观",
+        "观察地址栏与落地页",
+        "回到首页，在搜索框输入“正观”后提交"
+      ],
+      "expected": "进入搜索结果页，展示标题、摘要与分页；无结果时给出“未找到”提示。",
+      "actual": "HTTP 302 跳转 /down.html（客户端下载页），无搜索结果。",
+      "impact": "站内搜索不可用；用户被导流到下载页；搜索流量与 SEO 受损。",
+      "suggestion": "恢复搜索结果路由；无结果时返回搜索页提示，不要跳转下载页。",
+      "evidence": {
+        "image": "shots/01-search-redirect.png",
+        "text": "302 Location: /down.html；落地 title：客户端下载 居中、守正、观天下"
+      },
+      "test": "tests/test_search.py::test_search_results",
+      "xfail": true
+    },
+    {
+      "id": "DEF-02",
+      "caseId": "A19",
+      "title": "未知路径返回 HTTP 200 + 404 内容（软 404）",
+      "priority": "P2",
+      "severity": "中",
+      "status": "待修复",
+      "owner": "待指派",
+      "target": "待排期（建议本迭代）",
+      "component": "路由 / SEO",
+      "environment": "线上 www.zhengguannews.cn",
+      "firstSeen": "2026-11-04",
+      "lastChecked": "2026-11-06",
+      "steps": [
+        "访问 /this-path-not-exist-<uuid>.html",
+        "读取状态码、Content-Type 与正文长度"
+      ],
+      "expected": "HTTP 404，返回 404 页面。",
+      "actual": "HTTP 200；正文仅 22 字节：<h1>404,请求资源不存在了!</h1>",
+      "impact": "搜索引擎可能收录无效 URL；监控无法按状态码识别 404；缓存策略失真。",
+      "suggestion": "未知路径返回 404 状态码，保留现有 404 文案即可。",
+      "evidence": {
+        "image": "shots/02-soft-404-unknown.png",
+        "text": "200 OK；body 22 B"
+      },
+      "test": "tests/test_http_api.py::test_unknown_path_soft_404",
+      "xfail": true
+    },
+    {
+      "id": "DEF-03",
+      "caseId": "A20",
+      "title": "sitemap.xml 返回 HTTP 200 + HTML 404",
+      "priority": "P2",
+      "severity": "中",
+      "status": "待修复",
+      "owner": "待指派",
+      "target": "待排期（建议本迭代）",
+      "component": "SEO",
+      "environment": "线上 www.zhengguannews.cn",
+      "firstSeen": "2026-11-04",
+      "lastChecked": "2026-11-06",
+      "steps": [
+        "GET /sitemap.xml",
+        "检查 Content-Type 与正文"
+      ],
+      "expected": "HTTP 200 + application/xml 的合法 sitemap。",
+      "actual": "HTTP 200 + text/html；正文为 404 页面。",
+      "impact": "搜索引擎无法抓取 sitemap；新内容收录变慢；与 robots 声明可能不一致。",
+      "suggestion": "输出合法 XML sitemap；没有 sitemap 时明确返回 404。",
+      "evidence": {
+        "image": null,
+        "text": "content-type: text/html; charset=utf-8；body: <h1>404,请求资源不存在了!</h1>"
+      },
+      "test": "tests/test_http_api.py::test_sitemap_soft_404",
+      "xfail": true
+    },
+    {
+      "id": "DEF-04",
+      "caseId": "A29",
+      "title": "特殊字符 / 超长关键词搜索跳转下载页",
+      "priority": "P2",
+      "severity": "中",
+      "status": "待修复",
+      "owner": "待指派",
+      "target": "待排期（建议与 DEF-01 合并修复）",
+      "component": "搜索 / 参数校验",
+      "environment": "线上 www.zhengguannews.cn",
+      "firstSeen": "2026-11-04",
+      "lastChecked": "2026-11-06",
+      "steps": [
+        "首页点击搜索图标",
+        "输入“测试<>&%20”+ 30 个“长”",
+        "点击搜索并观察跳转"
+      ],
+      "expected": "进入搜索结果页，或给出参数错误提示；不跳转下载页。",
+      "actual": "跳转 /down.html，无任何提示。",
+      "impact": "边界输入无反馈；与 DEF-01 同根因；特殊字符处理不透明。",
+      "suggestion": "与 DEF-01 一并修复；前端 encodeURIComponent + 长度限制，后端做参数校验。",
+      "evidence": {
+        "image": "shots/04-search-special-chars.png",
+        "text": "landing: /down.html"
+      },
+      "test": "tests/test_search_edge.py::test_search_edge",
+      "xfail": true
+    },
+    {
+      "id": "DEF-05",
+      "caseId": "V08",
+      "title": "390 视口下播放器固定 1240px，页面横向溢出",
+      "priority": "P1",
+      "severity": "高",
+      "status": "待修复",
+      "owner": "待指派",
+      "target": "待排期（建议本迭代）",
+      "component": "视频 / 移动端",
+      "environment": "线上 www.zhengguannews.cn",
+      "firstSeen": "2026-11-04",
+      "lastChecked": "2026-11-06",
+      "steps": [
+        "390×844 移动端上下文打开 /video/23172.html",
+        "读取 video 尺寸与 documentElement.scrollWidth"
+      ],
+      "expected": "播放器宽度 ≤390，页面无横向滚动。",
+      "actual": "video 1240×702；scrollWidth 1412；clientWidth 390。",
+      "impact": "移动端横向滚动、控件超出屏幕，影响观看与转化。",
+      "suggestion": "容器 width:100%; max-width:100%；video aspect-ratio:16/9、height:auto；断点内取消固定 1240px。",
+      "evidence": {
+        "image": "shots/05-mobile-video-overflow.png",
+        "text": "video 1240×702；scrollWidth 1412（红线为 390px 视口）"
+      },
+      "test": "tests/test_video.py::test_video_mobile_layout",
+      "xfail": true
+    }
+  ]
+}

@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#e9edf0">
+<title>自动化测试证据包｜正观新闻</title>
+<style>
+  @font-face{font-family:"IBM Plex Sans";src:url("assets/fonts/plex-sans-400.woff2") format("woff2");font-weight:400;font-display:swap}
+  @font-face{font-family:"IBM Plex Sans";src:url("assets/fonts/plex-sans-500.woff2") format("woff2");font-weight:500;font-display:swap}
+  @font-face{font-family:"IBM Plex Sans";src:url("assets/fonts/plex-sans-600.woff2") format("woff2");font-weight:600;font-display:swap}
+  @font-face{font-family:"IBM Plex Mono";src:url("assets/fonts/plex-mono-400.woff2") format("woff2");font-weight:400;font-display:swap}
+  :root{
+    --ground:#e9edf0; --surface:#fff; --surface-2:#f4f6f8;
+    --ink:#101820; --muted:#55636f; --line:#c7d0d6; --line-strong:#7c8b96;
+    --navy:#123b5e; --red:#b3261e; --green:#1e6b45; --amber:#7a4a00;
+    --highlight:#ffe066; --focus:#0b5fff;
+    --sans:"IBM Plex Sans","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --mono:"IBM Plex Mono","SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{color-scheme:light}
+  body{margin:0;background:var(--ground);color:var(--ink);font:400 13.5px/1.65 var(--sans);-webkit-font-smoothing:antialiased;
+    background-image:linear-gradient(rgba(16,24,32,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(16,24,32,.05) 1px,transparent 1px);
+    background-size:24px 24px}
+  a{color:var(--navy);text-decoration:underline;text-underline-offset:2px}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}
+  ::selection{background:var(--highlight);color:var(--ink)}
+  code{background:var(--surface-2);border:1px solid var(--line);padding:0 4px;border-radius:2px;font:11px var(--mono)}
+  .wrap{max-width:1180px;margin:0 auto;padding:34px 30px 64px}
+  header{border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:22px}
+  .kicker{font-size:11.5px;color:var(--muted)}
+  h1{font:600 40px/1.1 var(--sans);letter-spacing:-.025em;margin:8px 0 10px;text-wrap:balance}
+  .sub{color:var(--muted);margin:0;max-width:780px;font-size:13.5px}
+  .meta{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--muted)}
+  .meta-item{border:1px solid var(--line);background:var(--surface);padding:2px 8px;border-radius:2px}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);background:var(--surface);border:1px solid var(--line);margin:20px 0 30px}
+  .kpi{padding:14px 16px;border-left:1px solid var(--line)}
+  .kpi:first-child{border-left:0}
+  .kpi .k{font-size:11.5px;color:var(--muted)}
+  .kpi .v{font:600 30px/1.1 var(--sans);letter-spacing:-.025em;margin-top:5px;font-variant-numeric:tabular-nums}
+  .kpi .h{font-size:11px;color:var(--muted);margin-top:3px}
+  .kpi.good .v{color:var(--green)}
+  .kpi.warn .v{color:var(--amber)}
+  h2{font:600 22px/1.3 var(--sans);letter-spacing:-.01em;margin:34px 0 6px;padding-top:12px;border-top:1px solid var(--ink)}
+  .lead{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+  .figs{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:12px}
+  .fig{background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;color:inherit;text-decoration:none}
+  .fig:hover{border-color:var(--line-strong)}
+  .fig img{width:100%;height:210px;object-fit:cover;object-position:top;display:block;border-bottom:1px solid var(--line)}
+  .fig .cap{padding:9px 12px;font-size:12px;color:var(--muted)}
+  .fig .cap b{display:block;color:var(--ink);font-size:12.5px;margin-bottom:2px;font-weight:600}
+  .issues{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .issue{background:var(--surface);border:1px solid var(--line);padding:15px 16px;display:flex;flex-direction:column}
+  .issue-head{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+  .tag{font:600 10.5px var(--mono);background:var(--navy);color:#fff;border-radius:2px;padding:2px 6px}
+  .prio{font-size:10.5px;border:1px solid var(--line-strong);border-radius:2px;padding:1px 7px;color:var(--muted)}
+  .prio.p1{color:var(--red);border-color:var(--red)}
+  .issue h3{font:600 15.5px/1.4 var(--sans);margin:0 0 6px}
+  .issue p{margin:0 0 10px;color:var(--muted);font-size:12.5px}
+  .issue img{width:100%;max-height:320px;object-fit:cover;object-position:top;border:1px solid var(--line);margin-bottom:10px}
+  .code{background:#101820;color:#d9e2e8;font:11.5px/1.55 var(--mono);padding:10px 12px;overflow:auto;margin:0 0 10px;white-space:pre-wrap}
+  .kv{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:9px;margin-top:auto;line-height:1.6}
+  .kv b{color:var(--ink);font-weight:600}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .box{background:var(--surface);border:1px solid var(--line);padding:16px 18px}
+  .box h4{margin:0 0 8px;font-size:13px;font-weight:600}
+  .box ul{margin:0;padding-left:18px}
+  .box li{margin:4px 0;font-size:12.5px}
+  .note-card{background:#fff8cc}
+  .note{border-top:2px solid var(--ink);background:#fff8cc;padding:12px 14px;font-size:12.5px;color:var(--ink)}
+  footer{margin-top:38px;border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font-size:11.5px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  @media (max-width:960px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .kpi:nth-child(odd){border-left:0}
+    .kpi:nth-child(n+3){border-top:1px solid var(--line)}
+    .figs,.issues,.two{grid-template-columns:1fr}
+    h1{font-size:32px}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  @media print{
+    body{background:#fff;background-image:none}
+    .wrap{max-width:none;padding:0}
+    .issue,.fig,.box,.kpi{break-inside:avoid}
+    a{color:var(--ink)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">证据包 2026-11-06</div>
+    <h1>自动化测试证据包</h1>
+    <p class="sub">正观新闻，38 条用例 / 12 个测试域 / 一次运行三份产物。本页离线可打开，图片与数据均取自本次现场采集。</p>
+    <div class="meta">
+      <span class="meta-item">平台 v0.8</span>
+      <span class="meta-item">run 20261106-151242-c818a1</span>
+      <span class="meta-item">采集 15:09–15:17</span>
+      <span class="meta-item">被测 www.zhengguannews.cn</span>
+    </div>
+  </header>
+
+  <section class="kpis">
+    <div class="kpi"><div class="k">用例总数</div><div class="v">38</div><div class="h">自动发现，22 个文件</div></div>
+    <div class="kpi good"><div class="k">有效通过率</div><div class="v">100%</div><div class="h">33/33 有效用例</div></div>
+    <div class="kpi"><div class="k">通过</div><div class="v">33</div><div class="h">passed</div></div>
+    <div class="kpi warn"><div class="k">已知问题</div><div class="v">5</div><div class="h">xfail 单列</div></div>
+    <div class="kpi"><div class="k">全量耗时</div><div class="v">154.1s</div><div class="h">2026-11-06 实测</div></div>
+  </section>
+
+  <h2>平台与报告</h2>
+  <p class="lead">从总览到执行、报告，再到已知问题，形成一条可演示、可归档的链路。</p>
+  <div class="figs">
+    <a class="fig" href="shots/10-platform-dashboard.png" target="_blank">
+      <img src="shots/10-platform-dashboard.png" alt="平台总览：38 条用例、有效通过率 100%、154.1s">
+      <div class="cap"><b>总览</b>38 条 / 100% / 154.1s，趋势与覆盖一屏可见</div>
+    </a>
+    <a class="fig" href="shots/11-platform-reports.png" target="_blank">
+      <img src="shots/11-platform-reports.png" alt="报告页：Allure 与 pytest HTML 双入口">
+      <div class="cap"><b>报告页</b>Allure 为默认，pytest HTML 可离线归档</div>
+    </a>
+    <a class="fig" href="shots/12-allure-overview.png" target="_blank">
+      <img src="shots/12-allure-overview.png" alt="Allure 报告总览：33 passed、5 skipped">
+      <div class="cap"><b>Allure</b>33 passed / 5 skipped（xfail）/ 38 total</div>
+    </a>
+  </div>
+
+  <div class="figs" style="grid-template-columns:1fr;margin-top:12px">
+    <a class="fig" href="shots/13-platform-defects.png" target="_blank">
+      <img src="shots/13-platform-defects.png" alt="平台已知问题页：5 条缺陷卡片" style="height:290px">
+      <div class="cap"><b>已知问题</b>5 条缺陷卡片：P1/P2 筛选、复现步骤、期望与实际、证据缩略图、关联用例</div>
+    </a>
+  </div>
+
+  <h2>5 个已确认问题</h2>
+  <p class="lead">均为现场复现结果，对应套件中的 5 条 xfail。点击图片可查看原图。</p>
+  <div class="issues">
+
+    <article class="issue" id="issue-A06">
+      <div class="issue-head"><span class="tag">A06</span><span class="prio p1">P1</span></div>
+      <h3>搜索结果被重定向到客户端下载页</h3>
+      <p>访问搜索 URL 后 302 跳转 <code>/down.html</code>，没有搜索结果页。</p>
+      <a href="shots/01-search-redirect.png" target="_blank"><img src="shots/01-search-redirect.png" alt="搜索重定向到下载页"></a>
+      <div class="code">GET /search.html/正观
+→ 302  Location: /down.html
+落地 title：客户端下载 居中、守正、观天下</div>
+      <div class="kv"><b>影响</b> 站内搜索不可用，用户被导流到下载页；<b>建议</b> 恢复结果页或给出无结果提示</div>
+    </article>
+
+    <article class="issue" id="issue-A19">
+      <div class="issue-head"><span class="tag">A19</span><span class="prio">P2</span></div>
+      <h3>未知路径返回 200 + 404 内容（软 404）</h3>
+      <p>随机不存在的 URL 返回 HTTP 200，正文仅 22 字节的 404 文案。</p>
+      <a href="shots/02-soft-404-unknown.png" target="_blank"><img src="shots/02-soft-404-unknown.png" alt="未知路径返回 200 + 404 内容"></a>
+      <div class="code">GET /this-path-not-exist-&lt;uuid&gt;.html
+→ 200 OK
+body: &lt;h1&gt;404,请求资源不存在了!&lt;/h1&gt;（22 B）</div>
+      <div class="kv"><b>影响</b> 搜索引擎可能收录无效 URL，监控无法按状态码识别；<b>建议</b> 返回 404 状态码</div>
+    </article>
+
+    <article class="issue" id="issue-A20">
+      <div class="issue-head"><span class="tag">A20</span><span class="prio">P2</span></div>
+      <h3>sitemap.xml 返回 200 + HTML 404</h3>
+      <p>声明为 sitemap 的地址返回 HTML 404 页，类型也不是 XML。</p>
+      <div class="code">GET /sitemap.xml
+→ 200 OK
+content-type: text/html; charset=utf-8
+body: &lt;h1&gt;404,请求资源不存在了!&lt;/h1&gt;</div>
+      <div class="kv"><b>影响</b> 搜索引擎无法抓取 sitemap，新内容收录变慢；<b>建议</b> 返回 application/xml</div>
+    </article>
+
+    <article class="issue" id="issue-A29">
+      <div class="issue-head"><span class="tag">A29</span><span class="prio">P2</span></div>
+      <h3>特殊字符或超长关键词搜索同样跳下载页</h3>
+      <p>输入 <code>测试&lt;&gt;&amp;%20</code> 加 30 个「长」，提交后仍落到 <code>/down.html</code>。</p>
+      <a href="shots/04-search-special-chars.png" target="_blank"><img src="shots/04-search-special-chars.png" alt="特殊字符搜索跳转下载页"></a>
+      <div class="code">keyword = 测试&lt;&gt;&amp;%20 + 长×30
+→ /down.html（无搜索结果、无错误提示）</div>
+      <div class="kv"><b>影响</b> 边界输入无反馈，与 A06 同根因；<b>建议</b> 参数校验、编码与长度限制</div>
+    </article>
+
+    <article class="issue" id="issue-V08">
+      <div class="issue-head"><span class="tag">V08</span><span class="prio p1">P1</span></div>
+      <h3>390 视口下播放器固定 1240px，页面横向溢出</h3>
+      <p>移动端上下文 clientWidth 390，但 video 渲染 1240×702，页面横向滚动宽度 1412。</p>
+      <a href="shots/05-mobile-video-overflow.png" target="_blank"><img src="shots/05-mobile-video-overflow.png" alt="390 视口下播放器 1240px 溢出"></a>
+      <div class="code">viewport 390×844
+video.getBoundingClientRect().width = 1240
+documentElement.scrollWidth = 1412（红线 = 390px）</div>
+      <div class="kv"><b>影响</b> 移动端横向滚动、控件超出屏幕；<b>建议</b> width:100%、max-width:100%、aspect-ratio:16/9</div>
+    </article>
+
+    <article class="issue note-card">
+      <h3 style="margin-bottom:8px">为什么是 5 条 xfail，而不是 5 个失败？</h3>
+      <p style="margin-bottom:8px">xfail 是“已知问题”的显式标记：问题已复现、已记录、已留证，避免每次回归都红一片；修复后删除 <code>pytest.xfail(...)</code>，断言即恢复为正常通过。</p>
+      <p style="margin:0"><b>口径：</b>有效用例 = passed + failed；有效通过率 = 33/33 = 100%，xfail 单列、不计入分母。</p>
+    </article>
+
+  </div>
+
+  <h2>口径与入口</h2>
+  <div class="two">
+    <div class="box">
+      <h4>本次运行</h4>
+      <ul>
+        <li>run id：<code>20261106-151242-c818a1</code></li>
+        <li>结果：33 passed / 0 failed / 5 xfailed / 0 skipped</li>
+        <li>耗时：154.1s（38 条，串行）</li>
+        <li>Allure：38 total / 33 passed / 5 skipped</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h4>直接打开</h4>
+      <ul>
+        <li><a href="http://127.0.0.1:8090/" target="_blank">测试平台总览</a></li>
+        <li><a href="http://127.0.0.1:8090/reports/report-20261106-151242-c818a1.html" target="_blank">pytest HTML 报告</a></li>
+        <li><a href="http://127.0.0.1:8090/reports/allure-20261106-151242-c818a1/index.html" target="_blank">Allure 报告</a></li>
+        <li><a href="../Defect-Cards.pdf" target="_blank">缺陷卡片 PDF</a> ｜ <a href="http://127.0.0.1:8090/defects" target="_blank">平台“已知问题”</a></li>
+        <li><a href="../QA-Capability-Brief.pdf" target="_blank">一页纸 PDF</a> ｜ <a href="../DEMO.md">演示脚本</a> ｜ <a href="issues.md">问题清单</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:14px">
+    <b>使用建议：</b>演示时先讲总览的 38 / 100% / 154.1s，再打开 Allure 说明“33 通过 + 5 已知”；最后用本页 5 张证据或平台“已知问题”页讲“发现了什么”。所有图片与数据均在本目录，断网也能讲。
+  </div>
+
+  <footer>
+    <span>自动化测试证据包 / 正观新闻 / 2026-11-06</span>
+    <span>数据来源：pytest、requests、Playwright 现场采集 ｜ measurements.json</span>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+<!-- avoid-ai-design-ignore-file: K7 · focus-visible 由 /assets/app.css 统一提供，扫描器按单文件检查无法看到外链样式 -->
+{% block title %}总览{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>测试总览</h1>
+    <p class="sub">原站黑盒回归：UI、HTTP 接口、资源与基础质量项。数据来自每次 pytest 运行。</p>
+  </div>
+  <div class="head-actions">
+    <button class="btn" id="refresh">刷新数据</button>
+    <a class="btn primary" href="/runs">去运行</a>
+  </div>
+</div>
+
+<section class="kpis">
+  <div class="kpi"><div class="k">用例总数</div><div class="v" id="kpiCases">-</div><div class="h">自动发现</div></div>
+  <div class="kpi"><div class="k">有效通过率</div><div class="v" id="kpiRate">-</div><div class="h" id="kpiRateHint">最近一次</div></div>
+  <div class="kpi"><div class="k">最近状态</div><div class="v" id="kpiStatus">-</div><div class="h" id="kpiStatusHint">尚未运行</div></div>
+  <div class="kpi"><div class="k">最近耗时</div><div class="v" id="kpiDuration">-</div><div class="h">全量执行</div></div>
+  <div class="kpi"><div class="k">已知问题</div><div class="v" id="kpiDefects">-</div><div class="h"><a href="/defects" id="kpiDefectsHint">xfail 对应</a></div></div>
+</section>
+
+<section class="grid-2">
+  <div class="card">
+    <div class="card-head"><h2>有效通过率趋势</h2><span class="hint">最近 12 次有效运行；xfail 不计入分母</span></div>
+    <div class="chart-box"><canvas id="trendChart" role="img" aria-label="有效通过率趋势图"></canvas></div>
+    <div id="trendEmpty" class="empty" style="display:none">暂无有效运行数据</div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>最近一次结果</h2><span class="hint" id="lastRunHint">-</span></div>
+    <div class="chart-box" style="height:220px"><canvas id="resultChart" role="img" aria-label="最近一次运行结果分布"></canvas></div>
+    <div class="legend" id="resultLegend"></div>
+  </div>
+</section>
+
+<section class="grid-2 equal">
+  <div class="card">
+    <div class="card-head"><h2>测试点覆盖</h2><span class="hint" id="coverageHint">-</span></div>
+    <div id="coverage"></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>最近运行</h2><a class="hint" href="/runs">全部</a></div>
+    <table><thead><tr><th>时间</th><th>状态</th><th>用例</th><th>耗时</th><th>HTML</th><th>Allure</th></tr></thead>
+    <tbody id="recentRuns"></tbody></table>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+Chart.defaults.color = '#55636f';
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let trendChart, resultChart;
+
+function kpis(cases, history) {
+  $('kpiCases').textContent = cases.length;
+  const last = history[0] || {};
+  const effective = effectiveOf(last);
+  $('kpiRate').textContent = effective ? rateOf(last) + '%' : '-';
+  $('kpiRateHint').textContent = effective
+    ? `${last.passed||0}/${effective} 有效通过${last.xfailed ? `，${last.xfailed} xfail` : ''}`
+    : '最近一次';
+  $('kpiStatus').textContent = last.status || '-';
+  $('kpiStatusHint').textContent = last.started ? fmtTime(last.started) : '尚未运行';
+  $('kpiDuration').textContent = last.duration != null ? last.duration + 's' : '-';
+}
+function trend(history) {
+  const rows = history.filter(r => totalOf(r) > 0).slice(0, 12).reverse();
+  $('trendEmpty').style.display = rows.length ? 'none' : 'block';
+  const ctx = $('trendChart').getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 250);
+  grad.addColorStop(0, 'rgba(18,59,94,.18)');
+  grad.addColorStop(1, 'rgba(18,59,94,0)');
+  if (trendChart) trendChart.destroy();
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: rows.map(r => fmtTime(r.started)),
+      datasets: [{
+        label: '有效通过率', data: rows.map(rateOf), borderColor: '#123b5e',
+        backgroundColor: grad, fill: true, tension: .35, borderWidth: 2,
+        pointRadius: 3, pointBackgroundColor: '#ffffff', pointBorderColor: '#123b5e', pointBorderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: reduceMotion ? false : {duration: 400},
+      plugins: {legend: {display: false}, tooltip: {
+        callbacks: {
+          label: (c) => `有效通过率 ${c.parsed.y}%`,
+          afterLabel: (c) => {
+            const r = rows[c.dataIndex];
+            const xf = r.xfailed ? `，${r.xfailed} xfail` : '';
+            return `${r.passed||0} passed / ${effectiveOf(r)} 有效${xf}`;
+          }
+        }
+      }},
+      scales: {
+        x: {grid: {display: false}, ticks: {maxRotation: 0, font: {size: 9}}},
+        y: {min: 0, max: 100, ticks: {stepSize: 25, callback: v => v + '%'}, grid: {color: '#d5dde2'}}
+      }
+    }
+  });
+}
+function result(history) {
+  const last = history[0] || {};
+  const vals = [last.passed||0, last.failed||0, last.skipped||0, last.xfailed||0];
+  const labels = ['通过', '失败', '跳过', 'xfail'];
+  const colors = ['#1e6b45', '#b3261e', '#98a6b0', '#7a4a00'];
+  const total = vals.reduce((a,b)=>a+b, 0);
+  $('lastRunHint').textContent = last.started ? fmtTime(last.started) : '-';
+  $('resultLegend').innerHTML = labels.map((l,i)=>`<span><i style="background:${colors[i]}"></i>${l} ${vals[i]}</span>`).join('');
+  if (resultChart) resultChart.destroy();
+  resultChart = new Chart($('resultChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {labels, datasets: [{data: total ? vals : [1], backgroundColor: total ? colors : ['#eceae3'], borderWidth: 0}]},
+    options: {responsive: true, maintainAspectRatio: false, cutout: '70%', animation: reduceMotion ? false : {duration: 400}, plugins: {legend: {display: false}}}
+  });
+}
+async function load() {
+  const [cases, history, defects] = await Promise.all([getCases(), getHistory(), getDefects()]);
+  kpis(cases, history);
+  $('kpiDefects').textContent = defects.counts ? defects.counts.total : 0;
+  $('kpiDefectsHint').textContent = defects.counts
+    ? `P1 ${defects.counts.p1}，P2 ${defects.counts.p2}，待修复`
+    : 'xfail 对应';
+  trend(history);
+  result(history);
+  renderCoverage(cases, $('coverage'));
+  $('coverageHint').textContent = `${new Set(cases.map(c=>c.area||'其他')).size} 个域，${cases.length} 条`;
+  renderRuns(history.slice(0, 6), $('recentRuns'));
+}
+$('refresh').onclick = () => load().then(() => toast('已刷新')).catch(e => toast(e.message));
+load().catch(e => toast(e.message));
+</script>
+{% endblock %}

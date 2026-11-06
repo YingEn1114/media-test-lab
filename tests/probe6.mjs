@@ -1,0 +1,16 @@
+import { chromium } from '@playwright/test';
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'] });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.goto('http://localhost/view?m=juMSnf8VT', { waitUntil: 'networkidle' });
+await page.waitForTimeout(1000);
+await page.locator('.vjs-settings-button').click();
+await page.getByText('Playback speed', { exact: false }).first().click();
+await page.waitForTimeout(300);
+await page.getByText('1.5', { exact: true }).click();
+await page.waitForTimeout(300);
+console.log('RATE:', await page.locator('video').evaluate(v=>v.playbackRate));
+await page.locator('.vjs-fullscreen-control').click();
+await page.waitForTimeout(500);
+console.log('FULLSCREEN:', JSON.stringify(await page.evaluate(()=>({fs:!!document.fullscreenElement, cls:document.querySelector('.video-js')?.className}))));
+await page.keyboard.press('Escape');
+await browser.close();

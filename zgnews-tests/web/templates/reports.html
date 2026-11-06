@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+<!-- avoid-ai-design-ignore-file: K7 · focus-visible 由 /assets/app.css 统一提供，扫描器按单文件检查无法看到外链样式 -->
+{% block title %}测试报告{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>测试报告</h1>
+    <p class="sub">Allure 为默认报告，保留 pytest HTML 作为轻量备份。每次运行自动生成。</p>
+  </div>
+  <div class="head-actions"><button class="btn" id="reload">刷新</button><a class="btn primary" id="latestAllure" href="#" target="_blank">最新 Allure</a></div>
+</div>
+<section class="card" style="margin-bottom:14px">
+  <div class="card-head"><h2>Allure 报告</h2><span class="hint">按时间倒序</span></div>
+  <div class="report-grid" id="allureList"><div class="empty">加载中…</div></div>
+</section>
+<section class="card">
+  <div class="card-head"><h2>pytest HTML 备份</h2><span class="hint">自包含单文件</span></div>
+  <div class="report-grid" id="pytestList"><div class="empty">加载中…</div></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+function card(r, type) {
+  return `<a class="report-card" href="${r.url}" target="_blank">
+    <div class="rtype">${type}</div>
+    <div class="rname">${esc(r.name)}</div>
+    <div class="rmeta">${fmtTime(r.mtime)}</div>
+  </a>`;
+}
+async function load() {
+  const items = await api('/api/reports');
+  const allure = items.filter(r => r.type === 'allure');
+  const pytest = items.filter(r => r.type === 'pytest');
+  $('allureList').innerHTML = allure.slice(0, 12).map(r => card(r, 'Allure')).join('') || '<div class="empty">暂无 Allure 报告，先运行一次</div>';
+  $('pytestList').innerHTML = pytest.slice(0, 12).map(r => card(r, 'pytest HTML')).join('') || '<div class="empty">暂无 HTML 报告</div>';
+  $('latestAllure').href = allure.length ? allure[0].url : '#';
+  if (!allure.length) $('latestAllure').style.opacity = .45;
+}
+$('reload').onclick = () => load().then(() => toast('已刷新')).catch(e => toast(e.message));
+load().catch(e => toast(e.message));
+</script>
+{% endblock %}

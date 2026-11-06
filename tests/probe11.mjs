@@ -1,0 +1,16 @@
+import { chromium } from '@playwright/test';
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'] });
+const ctx = await browser.newContext({ locale: 'en-US', viewport: { width: 1440, height: 900 } });
+const page = await ctx.newPage();
+await page.goto('http://localhost/accounts/login/', { waitUntil: 'networkidle' });
+await page.locator('#id_login').fill('admin');
+await page.locator('#id_password').fill('MediaCMS@123');
+await page.getByRole('button', { name: 'Sign In' }).click();
+await page.waitForLoadState('networkidle');
+await page.goto('http://localhost/view?m=juMSnf8VT', { waitUntil: 'networkidle' });
+await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+await page.waitForTimeout(800);
+await page.locator('textarea').first().fill('E2E comment probe ' + Date.now());
+const all = await page.locator('button').evaluateAll(els=>els.map(e=>({t:(e.innerText||'').trim(),disabled:e.disabled})).filter(x=>x.t));
+console.log(JSON.stringify(all.slice(-10), null, 2));
+await browser.close();

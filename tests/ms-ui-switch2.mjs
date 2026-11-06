@@ -1,0 +1,30 @@
+import { chromium } from '@playwright/test';
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'] });
+const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+await page.goto('http://localhost:8081/#/login', { waitUntil: 'networkidle' });
+await page.locator('.login-form input').first().fill('admin');
+await page.locator('.login-form input[type="password"]').fill('metersphere');
+await page.locator('button[type="submit"]').first().click();
+await page.waitForTimeout(3500);
+
+const sel = page.locator('.navbar .arco-select').first();
+console.log('select count', await page.locator('.navbar .arco-select').count());
+await sel.click();
+await page.waitForTimeout(800);
+const opts = page.locator('.arco-select-option');
+console.log('options', await opts.count(), JSON.stringify(await opts.allInnerTexts()));
+const target = opts.filter({ hasText: 'MediaCMS' }).first();
+console.log('target count', await target.count());
+await target.click();
+await page.waitForTimeout(3000);
+console.log('URL', page.url());
+console.log('NAVBAR', (await page.locator('.navbar').innerText()).slice(0, 200).replace(/\n/g,' | '));
+
+await page.goto('http://localhost:8081/#/api-test/management', { waitUntil: 'networkidle' });
+await page.waitForTimeout(2500);
+const text = await page.locator('body').innerText();
+console.log('MANAGEMENT URL', page.url());
+console.log('HAS 74', text.includes('74'), 'HAS MediaCMS', text.includes('MediaCMS'));
+console.log('TEXT', text.slice(0, 800).replace(/\n/g,' | '));
+await page.screenshot({ path: 'ms-mediacms-project.png', fullPage: false });
+await browser.close();

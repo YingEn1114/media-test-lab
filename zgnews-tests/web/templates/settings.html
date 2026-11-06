@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+<!-- avoid-ai-design-ignore-file: K7 · focus-visible 由 /assets/app.css 统一提供，扫描器按单文件检查无法看到外链样式 -->
+{% block title %}环境与设置{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>环境与设置</h1>
+    <p class="sub">当前运行目标、浏览器模式与报告工具链。修改环境变量后重启服务生效。</p>
+  </div>
+</div>
+<div class="settings-grid">
+  <section class="card">
+    <div class="card-head"><h2>运行环境</h2></div>
+    <div class="kv"><b>被测目标</b><span class="mono" id="baseUrl">-</span></div>
+    <div class="kv"><b>平台版本</b><span id="version">-</span></div>
+    <div class="kv"><b>Allure CLI</b><span id="allure">-</span></div>
+    <div class="kv"><b>浏览器</b><span>Chrome（本机）</span></div>
+    <div class="kv"><b>默认模式</b><span>headless</span></div>
+    <div class="kv"><b>通过率口径</b><span>有效用例 = passed + failed；xfail 单列，不计入分母</span></div>
+    <p class="note" style="margin-top:12px">要看真实浏览器：用例库勾选“显示浏览器”，选择慢动作；或命令行 <code>ZG_HEADLESS=0 ZG_SLOWMO=500</code>。</p>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>常用命令</h2></div>
+    <p class="note">启动平台</p>
+    <pre class="console" style="min-height:auto;max-height:none">.venv/bin/uvicorn app:app --host 127.0.0.1 --port 8090</pre>
+    <p class="note" style="margin-top:12px">直接跑 pytest + Allure</p>
+    <pre class="console" style="min-height:auto;max-height:none">.venv/bin/python -m pytest -q --alluredir=allure-results/latest
+.tools/allure-2.46.1/bin/allure generate allure-results/latest -o reports/allure-latest --clean</pre>
+    <p class="note" style="margin-top:12px">切换目标（重启生效）</p>
+    <pre class="console" style="min-height:auto;max-height:none">ZG_BASE_URL=https://www.zhengguannews.cn .venv/bin/uvicorn app:app --port 8090</pre>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(async () => {
+  const m = await getMeta();
+  $('baseUrl').textContent = m.baseUrl;
+  $('version').textContent = 'v' + m.version;
+  $('allure').textContent = m.allure ? ('已安装 ' + (m.allureVersion || '')) : '未安装';
+})().catch(e => toast(e.message));
+</script>
+{% endblock %}

@@ -1,0 +1,44 @@
+pipeline {
+  agent any
+  options { timeout(time: 30, unit: 'MINUTES') }
+
+  environment {
+    BASE_URL    = "${env.MEDIA_BASE_URL ?: 'http://localhost'}"
+    PW_CHANNEL  = 'chromium'
+    MS_BASE_URL = "${env.MS_BASE_URL ?: 'http://127.0.0.1:8081'}"
+  }
+
+  stages {
+    stage('Install') {
+      steps {
+        dir('tests') {
+          sh 'npm ci'
+          sh 'npx playwright install --with-deps chromium'
+        }
+      }
+    }
+    stage('Playwright') {
+      steps {
+        dir('tests') {
+          sh 'npx playwright test --config=playwright.config.mjs'
+        }
+      }
+    }
+    stage('MeterSphere Scenario') {
+      when { expression { (env.MS_USERNAME || env.MS_TOKEN) && env.MS_SCENARIO_ID && env.MS_PROJECT_ID } }
+      steps {
+        dir('tests') {
+          sh 'node scripts/run-ms-scenario.mjs'
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      dir('tests') {
+        archiveArtifacts artifacts: 'playwright-report/**', allowEmptyArchive: true
+      }
+    }
+  }
+}

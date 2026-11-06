@@ -1,0 +1,54 @@
+{
+  "capturedAt": "2026-11-06T15:16:19",
+  "base": "https://www.zhengguannews.cn",
+  "platform": "http://127.0.0.1:8090",
+  "runId": "20261106-151242-c818a1",
+  "issues": {
+    "search_redirect": {
+      "requested": "https://www.zhengguannews.cn/search.html/正观",
+      "status": 200,
+      "finalUrl": "https://www.zhengguannews.cn/down.html",
+      "redirects": [
+        302
+      ],
+      "isDownPage": true,
+      "note": "搜索 URL 302 跳转到 /down.html（客户端下载页），无搜索结果页",
+      "landedTitle": "正观新闻 居中、守正、观天下-正观新闻客户端下载"
+    },
+    "soft_404_unknown": {
+      "path": "/this-path-not-exist-5634db9346324f7299fb40fbd89cf6c8.html",
+      "status": 200,
+      "finalUrl": "https://www.zhengguannews.cn/this-path-not-exist-5634db9346324f7299fb40fbd89cf6c8.html",
+      "bodyHas404": true,
+      "bodyLength": 22,
+      "note": "随机不存在路径返回 HTTP 200，正文仅 22 字节 404 文案",
+      "title": ""
+    },
+    "soft_404_sitemap": {
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bodyHas404": true,
+      "snippet": "<h1>404,请求资源不存在了!</h1>",
+      "note": "sitemap.xml 返回 HTTP 200 + text/html，正文为 404 页"
+    },
+    "search_special_chars": {
+      "keyword": "测试<>&%20长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长",
+      "landedUrl": "https://www.zhengguannews.cn/down.html",
+      "isDownPage": true,
+      "title": "正观新闻 居中、守正、观天下-正观新闻客户端下载",
+      "note": "特殊字符搜索同样 302 跳转 /down.html"
+    },
+    "mobile_video": {
+      "listUrl": "https://www.zhengguannews.cn/list/26.html",
+      "videoPath": "/video/23172.html",
+      "viewportWidth": 390,
+      "clientWidth": 390,
+      "visualViewportWidth": 390,
+      "videoWidth": 1240,
+      "videoHeight": 702,
+      "scrollWidth": 1412,
+      "overflow": true,
+      "note": "390×844 移动端上下文：video 固定 1240px，页面横向滚动宽度 1412px"
+    }
+  }
+}

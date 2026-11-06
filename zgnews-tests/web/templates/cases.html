@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+<!-- avoid-ai-design-ignore-file: K7 · focus-visible 由 /assets/app.css 统一提供，扫描器按单文件检查无法看到外链样式 -->
+{% block title %}用例库{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>用例库</h1>
+    <p class="sub">Python 文件即用例；平台自动发现，按测试域分组。勾选后在“运行与日志”查看过程。</p>
+  </div>
+  <div class="head-actions">
+    <button class="btn" id="refreshCases">刷新用例</button>
+    <a class="btn primary" href="/runs">运行与日志</a>
+  </div>
+</div>
+<div class="toolbar">
+  <input class="input" id="q" aria-label="搜索用例" placeholder="搜索名称、文件或标签">
+  <select id="priority" aria-label="按优先级筛选"><option value="all">全部优先级</option><option value="P0">P0</option><option value="P1">P1</option><option value="P2">P2</option></select>
+  <select id="tag" aria-label="按标签筛选"><option value="all">全部标签</option></select>
+  <span class="spacer"></span>
+  <label class="note" style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="headed"> 显示浏览器</label>
+  <select id="slowmo" aria-label="慢动作速度"><option value="0">正常速度</option><option value="300" selected>慢动作 300ms</option><option value="700">慢动作 700ms</option></select>
+  <button class="btn" id="checkAll">全选</button>
+  <button class="btn" id="clearAll">清空</button>
+  <button class="btn primary" id="runSelected">运行选中</button>
+</div>
+<div id="caseList"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+let cases = [];
+function filtered() {
+  const q = $('q').value.trim().toLowerCase(), p = $('priority').value, t = $('tag').value;
+  return cases.filter(c => {
+    const text = `${c.name} ${c.desc} ${c.file} ${c.func} ${(c.tags||[]).join(' ')}`.toLowerCase();
+    return (!q || text.includes(q)) && (p === 'all' || c.priority === p) && (t === 'all' || (c.tags||[]).includes(t));
+  });
+}
+function render() {
+  const groups = {};
+  filtered().forEach(c => (groups[c.file] ||= []).push(c));
+  $('caseList').innerHTML = Object.entries(groups).map(([file, items]) => `
+    <div class="group">
+      <div class="group-title">${esc(file)}（${items.length}）</div>
+      <div class="case-grid">${items.map(c => `<label class="case">
+        <input type="checkbox" value="${esc(c.id)}" checked>
+        <div style="min-width:0"><div class="nm">${esc(c.name)}</div><div class="ds">${esc(c.desc)}</div>
+        <div class="meta">${chips(c)}<span class="chip">${esc(c.area||'')}</span></div>
+        <div class="node">${esc(c.id)}</div></div></label>`).join('')}</div>
+    </div>`).join('') || '<div class="empty">没有匹配用例</div>';
+}
+async function load(refresh=false) {
+  cases = await getCases(refresh);
+  const tags = [...new Set(cases.flatMap(c => c.tags||[]))].sort();
+  $('tag').innerHTML = '<option value="all">全部标签</option>' + tags.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  render();
+  toast(`已加载 ${cases.length} 条用例`);
+}
+$('runSelected').onclick = async () => {
+  const ids = selectedIds();
+  if (!ids.length) return toast('请先勾选用例');
+  try {
+    await runCases(ids, {headed: $('headed').checked, slowmo: Number($('slowmo').value)});
+    toast('已启动，正在跳转运行日志');
+    setTimeout(() => location.href = '/runs', 500);
+  } catch (e) { toast(e.message); }
+};
+$('refreshCases').onclick = () => load(true);
+$('q').oninput = render;
+$('priority').onchange = render;
+$('tag').onchange = render;
+$('checkAll').onclick = () => document.querySelectorAll('.case input').forEach(i => i.checked = true);
+$('clearAll').onclick = () => document.querySelectorAll('.case input').forEach(i => i.checked = false);
+load();
+</script>
+{% endblock %}

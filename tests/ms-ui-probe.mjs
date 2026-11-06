@@ -1,0 +1,16 @@
+import { chromium } from '@playwright/test';
+const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--no-sandbox'] });
+const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+await page.goto('http://localhost:8081/#/login', { waitUntil: 'networkidle' });
+await page.locator('.login-form input').first().fill('admin');
+await page.locator('.login-form input[type="password"]').fill('metersphere');
+await page.locator('button[type="submit"]').first().click();
+await page.waitForTimeout(4000);
+console.log('AFTER LOGIN:', page.url());
+await page.goto('http://localhost:8081/#/api-test/management', { waitUntil: 'networkidle' });
+await page.waitForTimeout(4000);
+console.log('URL:', page.url());
+console.log('TEXT:', (await page.locator('body').innerText()).slice(0, 1200).replace(/\n/g, ' | '));
+console.log('TABS/BUTTONS:', JSON.stringify(await page.locator('button, [role=tab], .arco-tabs-tab').evaluateAll(els => els.map(e => (e.innerText||'').trim()).filter(Boolean).slice(0, 30))));
+await page.screenshot({ path: 'ms-api-management.png', fullPage: false });
+await browser.close();

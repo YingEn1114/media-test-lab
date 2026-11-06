@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+platform.db
+runner.log
+reports/*.html
+screenshots/*.png
+.pytest_cache/
+.tools/
+allure-results/
+reports/allure-*/
+platform.db-*

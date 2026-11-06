@@ -1,0 +1,211 @@
+button {
+    cursor: pointer;
+}
+.playlist-items a {
+    text-decoration: none !important;
+}
+
+.video-js,
+.video-js[tabindex],
+.vjs-button:focus,
+.video-js video:focus,
+.video-js video:focus-visible {
+    outline: none !important;
+}
+
+/* Show time control in all screen sizes */
+.video-js .vjs-time-control {
+    display: block !important;
+}
+.video-js .vjs-time-control.vjs-time-divider {
+    display: none !important;
+}
+
+/* Hide time tooltip, mouse display, and sprite preview for audio files */
+.video-js.vjs-audio-type .vjs-time-tooltip,
+.video-js.vjs-audio-type .vjs-mouse-display,
+.video-js.vjs-audio-type .vjs-sprite-preview-tooltip,
+.video-js.vjs-audio-type .chapter-image-sprite {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* iOS Native Text Tracks - Position captions above control bar */
+/* Using ::cue which is the only way to style native tracks on iOS */
+video::cue {
+    line: -4; /* Move captions up by 4 lines from bottom */
+}
+
+/* Mobile-specific caption font size increases */
+@media (max-width: 767px) {
+    /* iOS native text tracks */
+    video::cue {
+        font-size: 1em;
+    }
+
+    /* Video.js text tracks for non-iOS */
+    .video-js .vjs-text-track-display {
+        font-size: 1em !important;
+    }
+
+    .video-js .vjs-text-track-cue {
+        font-size: 1em !important;
+    }
+}
+
+/* Extra small screens - even larger captions */
+@media (max-width: 480px) {
+    video::cue {
+        font-size: 1.2em;
+    }
+
+    .video-js .vjs-text-track-display {
+        font-size: 1.2em !important;
+    }
+
+    .video-js .vjs-text-track-cue {
+        font-size: 1.2em !important;
+    }
+}
+
+/* Tablet size - moderate increase */
+@media (min-width: 768px) and (max-width: 1024px) {
+    video::cue {
+        font-size: 1em;
+    }
+
+    .video-js .vjs-text-track-display {
+        font-size: 1em !important;
+    }
+
+    .video-js .vjs-text-track-cue {
+        font-size: 1em !important;
+    }
+}
+
+/* Adjust subtitle position when controls are visible (for non-native Video.js tracks) */
+/* When controls are VISIBLE (user is active), add extra bottom margin */
+.video-js:not(.vjs-user-inactive) .vjs-text-track-display {
+    margin-bottom: 2em; /* Adjust this value to move subtitles higher when controls are visible */
+}
+
+/* When controls are HIDDEN (user is inactive), use default positioning  */
+.video-js.vjs-user-inactive .vjs-text-track-display {
+    margin-bottom: 0.5em; /* Smaller margin when controls are hidden */
+}
+
+/* Center the fullscreen button inside its wrapper */
+/* @media (hover: hover) and (pointer: fine) {
+    .vjs-fullscreen-control svg {
+        width: 30px !important;
+        height: 30px !important;
+    }
+}
+ */
+
+/* Prevent control bar buttons from overflowing */
+.video-js .vjs-control-bar {
+    overflow: visible !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+}
+
+/* Ensure control bar stays within bounds - only allow non-essential buttons to shrink */
+.video-js .vjs-control-bar .vjs-settings-button,
+.video-js .vjs-control-bar .vjs-chapters-button,
+.video-js .vjs-control-bar .vjs-subtitles-button,
+.video-js .vjs-control-bar .vjs-captions-button,
+.video-js .vjs-control-bar .vjs-subs-caps-button,
+.video-js .vjs-control-bar .vjs-autoplay-toggle,
+.video-js .vjs-control-bar .vjs-next-video-button {
+    flex-shrink: 1 !important;
+    min-width: 0 !important;
+}
+
+/* Priority controls that should never shrink - maintain their size and spacing */
+.video-js .vjs-control-bar .vjs-play-control,
+.video-js .vjs-control-bar .vjs-volume-panel,
+.video-js .vjs-control-bar .vjs-fullscreen-control,
+.video-js .vjs-control-bar .vjs-picture-in-picture-toggle,
+.video-js .vjs-control-bar .custom-remaining-time {
+    flex-shrink: 0 !important;
+}
+
+/* Hide less important buttons on smaller screens */
+@media (max-width: 768px) {
+    .video-js .vjs-control-bar .vjs-picture-in-picture-toggle {
+        display: none !important;
+    }
+}
+
+@media (max-width: 500px) {
+    .video-js .vjs-control-bar .vjs-next-video-button {
+        display: none !important;
+    }
+}
+
+@media (max-width: 400px) {
+    /* Hide subtitles/captions button on very small screens - already available in settings */
+    .video-js .vjs-control-bar .vjs-subtitles-button,
+    .video-js .vjs-control-bar .vjs-captions-button,
+    .video-js .vjs-control-bar .vjs-subs-caps-button {
+        display: none !important;
+    }
+}
+
+.video-js .vjs-loading-spinner {
+    width: 64px;
+    height: 64px;
+    border: 0;
+    background: none;
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.45));
+}
+
+.video-js .vjs-loading-spinner:before {
+    display: none;
+}
+
+.video-js .vjs-loading-spinner:after {
+    width: 100%;
+    height: 100%;
+    border: 4px solid transparent;
+    border-top-color: #fff;
+    border-right-color: #fff;
+    border-bottom-color: #fff;
+}
+
+.video-js.vjs-seeking .vjs-loading-spinner:after,
+.video-js.vjs-waiting .vjs-loading-spinner:after {
+    border-top-color: #fff;
+    animation: mediacms-spinner-spin 0.9s linear infinite;
+    animation-delay: 0s;
+}
+
+@keyframes mediacms-spinner-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 480px) {
+    .video-js .vjs-loading-spinner {
+        width: 44px;
+        height: 44px;
+    }
+
+    .video-js .vjs-loading-spinner:after {
+        border-width: 3px;
+    }
+}
+
+.video-js.vjs-has-started.vjs-user-inactive.vjs-playing.vjs-waiting .vjs-control-bar {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.2s 0.3s;
+}
+
+.video-js.vjs-user-inactive.vjs-waiting .vjs-text-track-display {
+    margin-bottom: 2em;
+}

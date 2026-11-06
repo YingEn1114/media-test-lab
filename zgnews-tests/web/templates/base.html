@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<!-- avoid-ai-design-ignore-file: K7 · 焦点样式由 /assets/app.css 统一提供，实测 2px #0B5FFF 轮廓 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#e9edf0">
+<title>{% block title %}ZG QA{% endblock %}｜正观新闻测试平台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23123b5e'/%3E%3Ctext x='16' y='21' font-size='11' fill='%23fff' text-anchor='middle' font-family='Helvetica,Arial'%3EZG%3C/text%3E%3C/svg%3E">
+<link rel="preload" href="/assets/fonts/plex-sans-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/app.css?v=0.9">
+{% block head %}{% endblock %}
+</head>
+<body>
+<a class="skip" href="#main">跳到主内容</a>
+
+<header class="masthead">
+  <a class="brand" href="/" aria-label="ZG QA 测试执行台首页">
+    <span class="brand-mark" aria-hidden="true">ZG</span>
+    <span class="brand-name">QA</span>
+    <span class="brand-sub">测试执行台</span>
+  </a>
+  <div class="mast-meta">
+    <span><b>被测</b>{{ base_url }}</span>
+    <span><b>环境</b>线上</span>
+    <span><b>版本</b>v{{ version }}</span>
+  </div>
+  <div class="mast-right">
+    <span class="live"><i aria-hidden="true"></i>平台在线</span>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="index">
+    <nav class="nav" aria-label="主导航">
+      <a class="nav-item {% if page == 'dashboard' %}active{% endif %}" href="/" {% if page == 'dashboard' %}aria-current="page"{% endif %}>总览</a>
+      <a class="nav-item {% if page == 'cases' %}active{% endif %}" href="/cases" {% if page == 'cases' %}aria-current="page"{% endif %}>用例库</a>
+      <a class="nav-item {% if page == 'runs' %}active{% endif %}" href="/runs" {% if page == 'runs' %}aria-current="page"{% endif %}>运行与日志</a>
+      <a class="nav-item {% if page == 'reports' %}active{% endif %}" href="/reports" {% if page == 'reports' %}aria-current="page"{% endif %}>测试报告</a>
+      <a class="nav-item {% if page == 'defects' %}active{% endif %}" href="/defects" {% if page == 'defects' %}aria-current="page"{% endif %}>已知问题</a>
+      <a class="nav-item {% if page == 'settings' %}active{% endif %}" href="/settings" {% if page == 'settings' %}aria-current="page"{% endif %}>环境与设置</a>
+    </nav>
+    <div class="index-foot">
+      <div class="index-label">被测目标</div>
+      <a class="index-link" href="{{ base_url }}" target="_blank" rel="noreferrer">{{ base_url }}</a>
+      <div class="index-meta">Playwright / pytest / Allure<br>v{{ version }}</div>
+    </div>
+  </aside>
+
+  <main id="main" class="page">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<script src="/vendor/chart.umd.min.js"></script>
+<script src="/assets/app.js?v=0.9"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

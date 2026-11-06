@@ -1,0 +1,370 @@
+{
+  "tests/test_home.py::test_homepage": {
+    "name": "首页与导航",
+    "desc": "标题、导航、新闻链接、搜索框",
+    "priority": "P0",
+    "tags": [
+      "smoke",
+      "ui"
+    ],
+    "area": "首页与导航"
+  },
+  "tests/test_navigation.py::test_navigate_to_zhengzhou": {
+    "name": "频道导航跳转",
+    "desc": "点击“郑州”进入频道页",
+    "priority": "P0",
+    "tags": [
+      "smoke",
+      "ui"
+    ],
+    "area": "首页与导航"
+  },
+  "tests/test_list.py::test_list_page": {
+    "name": "列表页",
+    "desc": "列表页标题、新闻条目",
+    "priority": "P0",
+    "tags": [
+      "ui",
+      "smoke"
+    ],
+    "area": "列表与详情"
+  },
+  "tests/test_article.py::test_article_detail": {
+    "name": "新闻详情",
+    "desc": "正文、标题、图片",
+    "priority": "P0",
+    "tags": [
+      "ui",
+      "smoke"
+    ],
+    "area": "列表与详情"
+  },
+  "tests/test_search.py::test_search_overlay": {
+    "name": "搜索弹层",
+    "desc": "点击搜索图标、输入关键词",
+    "priority": "P1",
+    "tags": [
+      "ui",
+      "smoke"
+    ],
+    "area": "搜索"
+  },
+  "tests/test_search.py::test_search_results": {
+    "name": "搜索结果页（已知问题）",
+    "desc": "结果页重定向到下载页",
+    "priority": "P1",
+    "tags": [
+      "known"
+    ],
+    "area": "搜索"
+  },
+  "tests/test_responsive.py::test_mobile_home": {
+    "name": "移动端 H5",
+    "desc": "390x844 首页与 viewport",
+    "priority": "P1",
+    "tags": [
+      "mobile"
+    ],
+    "area": "响应式"
+  },
+  "tests/test_seo.py::test_home_seo": {
+    "name": "首页 SEO",
+    "desc": "description、canonical",
+    "priority": "P1",
+    "tags": [
+      "seo"
+    ],
+    "area": "SEO"
+  },
+  "tests/test_seo.py::test_article_seo": {
+    "name": "详情页 SEO",
+    "desc": "标题、description",
+    "priority": "P1",
+    "tags": [
+      "seo"
+    ],
+    "area": "SEO"
+  },
+  "tests/test_security.py::test_security_headers": {
+    "name": "安全响应头",
+    "desc": "HTTPS、X-Frame-Options、nosniff、Cookie",
+    "priority": "P1",
+    "tags": [
+      "security"
+    ],
+    "area": "安全"
+  },
+  "tests/test_links.py::test_nav_and_article_links": {
+    "name": "链接可用性",
+    "desc": "导航/新闻链接状态码",
+    "priority": "P1",
+    "tags": [
+      "links"
+    ],
+    "area": "链接与资源"
+  },
+  "tests/test_performance.py::test_home_performance": {
+    "name": "性能基线",
+    "desc": "DOMContentLoaded、资源数",
+    "priority": "P2",
+    "tags": [
+      "performance"
+    ],
+    "area": "性能"
+  },
+  "tests/test_accessibility.py::test_basic_accessibility": {
+    "name": "可访问性",
+    "desc": "标题层级、图片 alt、输入框",
+    "priority": "P2",
+    "tags": [
+      "a11y"
+    ],
+    "area": "可访问性"
+  },
+  "tests/test_http_api.py::test_home_http_contract": {
+    "name": "首页 HTTP 契约",
+    "desc": "状态码/类型/安全头/压缩",
+    "priority": "P1",
+    "tags": [
+      "api",
+      "http",
+      "smoke"
+    ],
+    "area": "接口与资源"
+  },
+  "tests/test_http_api.py::test_head_home": {
+    "name": "HEAD 请求",
+    "desc": "HEAD 首页状态与类型",
+    "priority": "P1",
+    "tags": [
+      "api",
+      "http"
+    ],
+    "area": "接口与资源"
+  },
+  "tests/test_http_api.py::test_robots_txt": {
+    "name": "robots.txt",
+    "desc": "状态、User-agent、Disallow",
+    "priority": "P1",
+    "tags": [
+      "api",
+      "http"
+    ],
+    "area": "接口与资源"
+  },
+  "tests/test_http_api.py::test_static_assets": {
+    "name": "静态资源 CDN",
+    "desc": "CSS/JS 状态与类型",
+    "priority": "P1",
+    "tags": [
+      "api",
+      "http"
+    ],
+    "area": "接口与资源"
+  },
+  "tests/test_http_api.py::test_image_cdn": {
+    "name": "图片 CDN",
+    "desc": "图片状态、类型、大小",
+    "priority": "P1",
+    "tags": [
+      "api",
+      "http"
+    ],
+    "area": "接口与资源"
+  },
+  "tests/test_http_api.py::test_unknown_path_soft_404": {
+    "name": "未知路径软 404",
+    "desc": "200+404 内容（已知问题）",
+    "priority": "P1",
+    "tags": [
+      "api",
+      "http"
+    ],
+    "area": "接口与资源"
+  },
+  "tests/test_http_api.py::test_sitemap_soft_404": {
+    "name": "sitemap 软 404",
+    "desc": "200+404 内容（已知问题）",
+    "priority": "P1",
+    "tags": [
+      "api",
+      "http"
+    ],
+    "area": "接口与资源"
+  },
+  "tests/test_video.py::test_video_channel_list": {
+    "name": "视频频道列表",
+    "desc": "/list/26.html 视频卡片与链接",
+    "priority": "P1",
+    "tags": [
+      "video",
+      "player"
+    ],
+    "area": "视频与播放器"
+  },
+  "tests/test_video.py::test_video_player_loads": {
+    "name": "播放器加载",
+    "desc": "video 元数据/尺寸/readyState/Prism 容器",
+    "priority": "P1",
+    "tags": [
+      "video",
+      "player",
+      "smoke"
+    ],
+    "area": "视频与播放器"
+  },
+  "tests/test_video.py::test_video_play_pause": {
+    "name": "播放与暂停",
+    "desc": "muted play() 后 paused 状态",
+    "priority": "P1",
+    "tags": [
+      "video",
+      "player",
+      "smoke"
+    ],
+    "area": "视频与播放器"
+  },
+  "tests/test_video.py::test_video_seek": {
+    "name": "进度跳转",
+    "desc": "currentTime=10 后位置",
+    "priority": "P1",
+    "tags": [
+      "video",
+      "player"
+    ],
+    "area": "视频与播放器"
+  },
+  "tests/test_video.py::test_video_volume_mute": {
+    "name": "音量与静音",
+    "desc": "muted/volume 属性",
+    "priority": "P1",
+    "tags": [
+      "video",
+      "player"
+    ],
+    "area": "视频与播放器"
+  },
+  "tests/test_video.py::test_video_controls": {
+    "name": "播放器控件",
+    "desc": "控制条/进度/音量/大播放按钮",
+    "priority": "P1",
+    "tags": [
+      "video",
+      "player"
+    ],
+    "area": "视频与播放器"
+  },
+  "tests/test_video.py::test_video_media_http": {
+    "name": "MP4 与 Range",
+    "desc": "HEAD video/mp4、206 Partial Content",
+    "priority": "P1",
+    "tags": [
+      "video",
+      "player"
+    ],
+    "area": "视频与播放器"
+  },
+  "tests/test_video.py::test_video_mobile_layout": {
+    "name": "移动端播放器",
+    "desc": "390 视口宽度（已知溢出）",
+    "priority": "P1",
+    "tags": [
+      "video",
+      "player"
+    ],
+    "area": "视频与播放器"
+  },
+  "tests/test_metadata.py::test_news_jsonld": {
+    "name": "新闻结构化数据",
+    "desc": "NewsArticle JSON-LD 字段",
+    "area": "页面与内容",
+    "priority": "P1",
+    "tags": [
+      "seo",
+      "jsonld"
+    ]
+  },
+  "tests/test_metadata.py::test_open_graph_and_canonical": {
+    "name": "Open Graph / canonical",
+    "desc": "og:type/title/url/image、canonical",
+    "area": "页面与内容",
+    "priority": "P1",
+    "tags": [
+      "seo",
+      "og"
+    ]
+  },
+  "tests/test_share.py::test_article_share_component": {
+    "name": "文章分享组件",
+    "desc": "微信/微博图标、分享文案",
+    "area": "页面与内容",
+    "priority": "P1",
+    "tags": [
+      "share"
+    ]
+  },
+  "tests/test_footer.py::test_footer_links": {
+    "name": "页脚与合规链接",
+    "desc": "关于/协议/隐私/备案链接",
+    "area": "首页与导航",
+    "priority": "P1",
+    "tags": [
+      "footer"
+    ]
+  },
+  "tests/test_login_modal.py::test_login_modal": {
+    "name": "登录弹层",
+    "desc": "短信/密码登录、输入框、验证码",
+    "area": "首页与导航",
+    "priority": "P1",
+    "tags": [
+      "login"
+    ]
+  },
+  "tests/test_special.py::test_special_calendar": {
+    "name": "正观早参专题",
+    "desc": "专题标题、日历组件",
+    "area": "页面与内容",
+    "priority": "P1",
+    "tags": [
+      "special"
+    ]
+  },
+  "tests/test_channels.py::test_all_channels": {
+    "name": "全部频道可用性",
+    "desc": "16 个频道 200 + HTML",
+    "area": "首页与导航",
+    "priority": "P1",
+    "tags": [
+      "channels"
+    ]
+  },
+  "tests/test_home_sections.py::test_home_sections": {
+    "name": "首页视频/专题栏目",
+    "desc": "视频 swiper、专题入口",
+    "area": "首页与导航",
+    "priority": "P1",
+    "tags": [
+      "home"
+    ]
+  },
+  "tests/test_search_edge.py::test_search_edge": {
+    "name": "搜索边界",
+    "desc": "空关键词、特殊字符/xfail",
+    "area": "搜索",
+    "priority": "P1",
+    "tags": [
+      "search",
+      "edge"
+    ]
+  },
+  "tests/test_download.py::test_download_page": {
+    "name": "客户端下载页",
+    "desc": "下载页标题、应用市场链接",
+    "area": "页面与内容",
+    "priority": "P1",
+    "tags": [
+      "download"
+    ]
+  }
+}

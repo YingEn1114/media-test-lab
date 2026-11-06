@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+<!-- avoid-ai-design-ignore-file: K7 · focus-visible 由 /assets/app.css 统一提供，扫描器按单文件检查无法看到外链样式 -->
+{% block title %}已知问题{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>已知问题</h1>
+    <p class="sub">测试套件中 5 条 xfail 对应的已确认问题。修复后删除用例中的 <code>pytest.xfail(...)</code>，断言即恢复为正常门禁。</p>
+  </div>
+  <div class="head-actions">
+    <button class="btn" id="reload">刷新</button>
+    <a class="btn primary" href="/evidence/index.html" target="_blank">证据包</a>
+  </div>
+</div>
+
+<section class="kpis four">
+  <div class="kpi"><div class="k">问题总数</div><div class="v" id="dTotal">-</div><div class="h">xfail 对应</div></div>
+  <div class="kpi"><div class="k">P1</div><div class="v" id="dP1">-</div><div class="h">高优</div></div>
+  <div class="kpi"><div class="k">P2</div><div class="v" id="dP2">-</div><div class="h">一般</div></div>
+  <div class="kpi"><div class="k">待修复</div><div class="v" id="dTodo">-</div><div class="h">全部</div></div>
+</section>
+
+<div class="toolbar">
+  <button class="btn primary" data-filter="all">全部</button>
+  <button class="btn" data-filter="P1">P1</button>
+  <button class="btn" data-filter="P2">P2</button>
+  <span class="spacer"></span>
+  <span class="note" id="generated"></span>
+</div>
+
+<div class="defects-grid" id="defectList"><div class="empty">加载中…</div></div>
+
+<p class="note" style="margin-top:16px">
+  口径：有效用例 = passed + failed；xfail 单列、不计入通过率分母。问题修复后，对应 xfail 应从 5 条减少，平台“已知问题”与 Allure 的 skipped 数会同步下降。
+</p>
+{% endblock %}
+{% block scripts %}
+<script>
+let defects = [];
+let filter = 'all';
+
+function card(d) {
+  const img = d.evidence && d.evidence.image
+    ? `<a href="/evidence/${esc(d.evidence.image)}" target="_blank"><img src="/evidence/${esc(d.evidence.image)}" alt="${esc(d.title)}"></a>
+       <div class="note" style="margin:-4px 0 4px">证据：${esc(d.evidence.text || d.evidence.image)}</div>`
+    : `<div class="note" style="margin:6px 0">证据：${esc((d.evidence && d.evidence.text) || '见 measurements.json')}</div>`;
+  const steps = (d.steps || []).map(s => `<li>${esc(s)}</li>`).join('');
+  return `<article class="defect">
+    <div class="defect-top">
+      <span class="chip tag">${esc(d.id)}</span>
+      <span class="chip ${esc((d.priority || 'P2').toLowerCase())}">${esc(d.priority || 'P2')}</span>
+      <span class="chip">严重 ${esc(d.severity || '-')}</span>
+      <span class="badge todo">${esc(d.status || '待修复')}</span>
+      <span class="spacer"></span>
+      <span class="mono">${esc(d.caseId || '')}</span>
+    </div>
+    <h3>${esc(d.title)}</h3>
+    <div class="defect-meta">
+      <span><b>组件</b>${esc(d.component || '-')}</span>
+      <span><b>负责人</b>${esc(d.owner || '待指派')}</span>
+      <span><b>目标</b>${esc(d.target || '待排期')}</span>
+      <span><b>复核</b>${esc(d.lastChecked || '-')}</span>
+    </div>
+    <ol>${steps}</ol>
+    <div class="row"><b>期望</b>${esc(d.expected)}</div>
+    <div class="row actual"><b>实际</b>${esc(d.actual)}</div>
+    <div class="row"><b>影响</b>${esc(d.impact)}</div>
+    ${img}
+    <div class="sugg"><b>建议：</b>${esc(d.suggestion)}</div>
+    <div class="defect-foot">${esc(d.test)}</div>
+  </article>`;
+}
+
+function render() {
+  const rows = defects.filter(d => filter === 'all' || d.priority === filter);
+  $('defectList').innerHTML = rows.length ? rows.map(card).join('') : '<div class="empty">没有匹配的问题</div>';
+  document.querySelectorAll('[data-filter]').forEach(b => {
+    b.classList.toggle('primary', b.dataset.filter === filter);
+  });
+}
+
+async function load() {
+  const data = await getDefects();
+  defects = data.items || [];
+  const c = data.counts || {};
+  $('dTotal').textContent = c.total ?? defects.length;
+  $('dP1').textContent = c.p1 ?? '-';
+  $('dP2').textContent = c.p2 ?? '-';
+  $('dTodo').textContent = c.todo ?? '-';
+  $('generated').textContent = `数据 ${data.generatedAt || '-'}，${defects.length} 条`;
+  if (data.evidence === false) {
+    $('defectList').insertAdjacentHTML('beforebegin', '<div class="empty">证据目录未挂载，图片将不可用</div>');
+  }
+  render();
+}
+
+document.querySelectorAll('[data-filter]').forEach(b => {
+  b.onclick = () => { filter = b.dataset.filter; render(); };
+});
+$('reload').onclick = () => load().then(() => toast('已刷新')).catch(e => toast(e.message));
+load().catch(e => toast(e.message));
+</script>
+{% endblock %}
