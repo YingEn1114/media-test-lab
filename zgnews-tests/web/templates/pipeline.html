@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+<!-- avoid-ai-design-ignore-file: K7 · focus-visible 由 /assets/app.css 统一提供，扫描器按单文件检查无法看到外链样式 -->
+{% block title %}AI 流水线{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>AI 测试流水线</h1>
+    <p class="sub">需求 → AI 写用例 → AI 评测 → 写入用例库 → 冒烟 → 全量 → 缺陷邮件通知 RD → RD 修复+自回测 → QA 验收 → 报告抄送领导。全链路可追溯。</p>
+  </div>
+  <div class="head-actions">
+    <span class="chip" id="aiMode">AI 模式：检测中</span>
+    <a class="btn" href="/cases">用例库</a>
+    <a class="btn" href="/reports">测试报告</a>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <div class="card-head"><h2>新建流水线</h2><span class="hint">输入一句话需求，平台自动生成并执行用例</span></div>
+  <textarea class="input" id="req" rows="3" style="width:100%;min-width:0;resize:vertical"
+    placeholder="例如：验证正观新闻首页、频道导航、站内搜索与 robots.txt 接口是否正常"></textarea>
+  <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button class="btn primary" id="start">启动流水线</button>
+    <span class="note">AI 只从受限检查工具箱选取，平台渲染固定模板用例，不执行 AI 任意代码。</span>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><h2>流水线</h2><span class="hint" id="plHint">最近记录</span></div>
+    <div id="plList"><div class="empty">暂无流水线</div></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>发件箱</h2><span class="hint">模拟发送，落地 outbox/</span></div>
+    <div id="mailList"><div class="empty">选择流水线后显示相关邮件</div></div>
+  </div>
+</div>
+
+<div id="detail"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+let current = null, timer = null;
+const STAGE_LABEL = {queued:'排队',generate:'AI 生成',evaluate:'AI 评测',write:'写入用例库',smoke:'冒烟',full:'全量',triage:'缺陷分派',done:'出报告',error:'异常'};
+const BUG_LABEL = {open:'待认领',claimed:'已认领',fixing:'修复中',fixed_pending_qa:'待 QA 验收',closed:'已关闭',reopened:'已打回'};
+
+async function detectAI() {
+  // 无专门接口，用 meta 占位；AI 模式由后端环境决定，这里仅提示用法
+  $('aiMode').textContent = 'AI 模式：按服务端 ZG_AI_* 环境';
+}
+async function loadList() {
+  const rows = await api('/api/pipeline/list');
+  $('plList').innerHTML = rows.map(r => `<div class="pl-row ${current===r.id?'on':''}" data-id="${esc(r.id)}">
+    <div><div class="pl-req">${esc(r.requirement.slice(0,46))}</div>
+    <div class="node">${esc(r.id)} · ${esc(r.source||'-')}</div></div>
+    <div style="text-align:right">${badge(r.status)}<div class="hint">${STAGE_LABEL[r.stage]||r.stage||''}</div></div>
+  </div>`).join('') || '<div class="empty">暂无流水线</div>';
+}
+async function loadMail(pid) {
+  const rows = await api('/api/outbox' + (pid ? '?pipeline_id=' + encodeURIComponent(pid) : ''));
+  $('mailList').innerHTML = rows.map(m => `<div class="mail-row">
+    <div class="mail-subj">${esc(m.subject)}</div>
+    <div class="node">→ ${esc(m.to_addr)}${m.cc?' · 抄送 '+esc(m.cc):''} · ${esc(m.transport)}</div>
+  </div>`).join('') || '<div class="empty">暂无邮件</div>';
+}
+// PLACEHOLDER_JS
+function caseOutcome(p, nodeid) {
+  const full = p.data && p.data.full;
+  if (!full || !full.cases) return '';
+  const c = full.cases.find(x => x.nodeid === nodeid);
+  return c ? c.outcome : '';
+}
+function renderDetail(p) {
+  const d = p.data || {};
+  const ev = d.evaluation || {};
+  const tl = (d.timeline || []).map(t => `<div class="tl-row"><span class="tl-stage">${STAGE_LABEL[t.stage]||t.stage}</span><span class="node">${fmtTime(t.ts)}</span><span>${esc(t.msg)}</span></div>`).join('');
+  const cases = (d.cases || []).map(c => {
+    const oc = caseOutcome(p, c.nodeid);
+    const tag = oc === 'failed' ? '<span class="chip p0">FAILED</span>' : oc === 'passed' ? '<span class="chip ok">PASSED</span>' : '';
+    return `<div class="case ro" style="cursor:default">
+      <div style="min-width:0"><div class="nm">${tag} ${esc(c.name)} <span class="chip ${(c.priority||'P2').toLowerCase()}">${esc(c.priority)}</span></div>
+      <div class="ds">${esc(c.desc)} · 检查：${esc(c.check.kind)}</div>
+      <div class="node">${esc(c.nodeid)}</div></div></div>`;
+  }).join('');
+  const bugs = (p.bugs || []).map(renderBug).join('') || '<div class="empty">无缺陷</div>';
+  const warn = (d.warnings||[]).length ? `<div class="warnbar">${d.warnings.map(esc).join('<br>')}</div>` : '';
+  $('detail').innerHTML = `<div class="card" style="margin-top:16px">
+    <div class="card-head"><h2>流水线详情</h2><span class="hint">${esc(p.id)} · 来源 ${esc(p.source||'-')} · ${badge(p.status)}</span></div>
+    ${warn}
+    <div class="grid-2 equal">
+      <div><h3 class="sec">执行时间线</h3><div class="timeline">${tl||'<div class="empty">—</div>'}</div></div>
+      <div><h3 class="sec">AI 评测</h3><div class="evalbox"><b>${ev.overallScore??'-'} 分</b><div class="note">${esc(ev.summary||'')}</div></div>
+        <h3 class="sec">测试结果</h3><div class="note">冒烟：${sumC(d.smoke)}　全量：${sumC(d.full)}
+        ${d.full&&d.full.report?` · <a href="${d.full.report}" target="_blank">报告</a>`:''}
+        ${d.full&&d.full.allure?` · <a href="${d.full.allure}" target="_blank">Allure</a>`:''}</div>
+      </div>
+    </div>
+    <h3 class="sec">生成用例（${(d.cases||[]).length}）</h3><div class="case-grid">${cases||'<div class="empty">—</div>'}</div>
+    <h3 class="sec">缺陷与处理（${(p.bugs||[]).length}）</h3>${bugs}
+    ${d.finalReport?`<div class="okbar">✓ 已出报告并抄送领导：${esc((d.finalReport.cc||[]).join('、'))}</div>`:''}
+  </div>`;
+}
+function sumC(r){ if(!r) return '—'; const c=r.counts||{}; return `${r.status} (通过 ${c.passed||0} / 失败 ${c.failed||0})`; }
+function renderBug(b) {
+  const hist = (b.history||[]).map(h=>`<div class="node">${fmtTime(h.ts)} · ${esc(h.actor)} · ${esc(h.action)}${h.note?'：'+esc(h.note.slice(0,80)):''}</div>`).join('');
+  let actions = '';
+  if (b.status==='open') actions = `<button class="btn" onclick="claim('${b.id}')">RD 认领</button>`;
+  else if (b.status==='claimed'||b.status==='fixing'||b.status==='reopened') actions = `<button class="btn primary" onclick="fix('${b.id}')">提交修复 + 自回测</button>`;
+  else if (b.status==='fixed_pending_qa') actions = `<button class="btn primary" onclick="verify('${b.id}',true)">QA 验收通过</button> <button class="btn" onclick="verify('${b.id}',false)">打回</button>`;
+  return `<div class="defect" style="margin-bottom:10px">
+    <div class="defect-top"><span class="chip ${(b.priority||'P2').toLowerCase()}">${esc(b.priority)}</span>${badge(b.status==='closed'?'passed':b.status==='open'?'failed':'running')}<b>${esc(BUG_LABEL[b.status]||b.status)}</b><span class="node">${esc(b.id)}</span></div>
+    <h3>${esc(b.title)}</h3>
+    <div class="note">测试域：${esc(b.area)} · 处理人：${esc(b.owner_name)} &lt;${esc(b.owner_email)}&gt; · 用例 ${esc(b.nodeid)}</div>
+    ${b.fix_note?`<div class="row"><b>修复</b>${esc(b.fix_note)}</div>`:''}
+    <div style="margin:8px 0">${hist}</div>
+    <div class="head-actions">${actions}</div>
+  </div>`;
+}
+async function openPipeline(pid) {
+  current = pid;
+  const p = await api('/api/pipeline/' + encodeURIComponent(pid));
+  renderDetail(p); loadMail(pid); loadList();
+  clearInterval(timer);
+  if (p.status === 'running') timer = setInterval(() => refresh(pid), 2500);
+}
+async function refresh(pid) {
+  const p = await api('/api/pipeline/' + encodeURIComponent(pid));
+  renderDetail(p); loadMail(pid);
+  if (p.status !== 'running') { clearInterval(timer); loadList(); }
+}
+async function claim(id){ try{ await api('/api/bugs/'+id+'/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}); toast('已认领'); refresh(current);}catch(e){toast(e.message);} }
+async function fix(id){ const note=prompt('填写修复说明（提交后平台会自动自回测）'); if(!note)return; toast('提交中，正在自回测…'); try{ await api('/api/bugs/'+id+'/fix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note})}); toast('自回测完成'); refresh(current);}catch(e){toast(e.message);} }
+async function verify(id,ok){ const note=ok?'':prompt('打回原因')||''; try{ await api('/api/bugs/'+id+'/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accept:ok,note})}); toast(ok?'已验收':'已打回'); refresh(current);}catch(e){toast(e.message);} }
+$('start').onclick = async () => {
+  const requirement = $('req').value.trim();
+  if (!requirement) return toast('请输入需求');
+  try { const r = await api('/api/pipeline/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requirement})});
+    toast('已启动'); setTimeout(()=>openPipeline(r.id), 400);
+  } catch(e){ toast(e.message); }
+};
+$('plList').onclick = (e) => { const row=e.target.closest('.pl-row'); if(row) openPipeline(row.dataset.id); };
+detectAI(); loadList(); loadMail();
+
+</script>
+{% endblock %}

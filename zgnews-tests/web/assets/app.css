@@ -139,6 +139,24 @@ td.mono,.mono{font-variant-numeric:tabular-nums}
 .chipbtn.active{background:var(--highlight);border-color:var(--ink);color:var(--ink);font-weight:600}
 .chipbtn .n{font-variant-numeric:tabular-nums;opacity:.75}
 
+/* AI 流水线 */
+.pl-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 8px;border-bottom:1px solid var(--line);cursor:pointer}
+.pl-row:hover{background:#fff8cc}
+.pl-row.on{background:var(--highlight)}
+.pl-req{font-size:12.5px;font-weight:600;line-height:1.4}
+.mail-row{padding:8px 8px;border-bottom:1px solid var(--line)}
+.mail-subj{font-size:12.5px;font-weight:600}
+.sec{font:600 13px/1.4 var(--sans);margin:16px 0 8px;color:var(--ink)}
+.timeline{border-left:2px solid var(--line);padding-left:12px}
+.tl-row{display:grid;grid-template-columns:72px 110px 1fr;gap:8px;font-size:11.5px;color:var(--muted);margin:5px 0;align-items:baseline}
+.tl-stage{font-weight:600;color:var(--navy)}
+.evalbox{border:1px solid var(--line);padding:10px 12px;margin-bottom:6px}
+.evalbox b{font:600 22px/1 var(--sans);font-variant-numeric:tabular-nums}
+.warnbar{background:#fff3cd;border:1px solid var(--amber);color:var(--amber);padding:8px 10px;font-size:12px;margin-bottom:12px}
+.okbar{background:#eaf6ef;border:1px solid var(--green);color:var(--green);padding:8px 10px;font-size:12.5px;margin-top:12px;font-weight:600}
+.case.ro{grid-template-columns:1fr}
+.chip.ok{color:var(--green);border-color:var(--green)}
+
 /* case list */
 /* 按测试域分组 + 多列卡片 */
 .area-group{margin-bottom:16px}

@@ -12,6 +12,9 @@ import threading
 import time
 import uuid
 
+import mailer
+import pipeline
+
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -197,12 +200,43 @@ def _save_run(run_id, started, status, nodeids, report=None, log="", counts=None
     conn.close()
 
 
+def _parse_junit(path, nodeids):
+    """解析 junit xml，按测试函数名映射回 nodeid，返回每条用例结果。"""
+    import xml.etree.ElementTree as ET
+
+    by_func = {}
+    for nid in nodeids:
+        by_func[nid.split("::")[-1]] = nid
+    results = []
+    try:
+        root = ET.parse(path).getroot()
+    except Exception:
+        return results
+    for tc in root.iter("testcase"):
+        name = tc.get("name", "")
+        nid = by_func.get(name, name)
+        outcome = "passed"
+        message = ""
+        for child in tc:
+            tag = child.tag.lower()
+            if tag in ("failure", "error"):
+                outcome = "failed"
+                message = (child.get("message") or child.text or "")[:800]
+                break
+            if tag == "skipped":
+                outcome = "xfailed" if "xfail" in (child.get("type") or "").lower() else "skipped"
+        results.append({"nodeid": nid, "name": name, "outcome": outcome, "message": message})
+    return results
+
+
 def _runner(nodeids, run_id, headed=False, slowmo=0):
     report_name = f"report-{run_id}.html"
     report_path = os.path.join(REPORT_DIR, report_name)
+    junit_path = os.path.join(REPORT_DIR, f"junit-{run_id}.xml")
     allure_results = os.path.join(ROOT, "allure-results", run_id)
     cmd = [sys.executable, "-m", "pytest", *nodeids, "-q",
            "--html", report_path, "--self-contained-html",
+           "--junitxml", junit_path,
            "--alluredir", allure_results]
     started = time.time()
     with LOCK:
@@ -260,8 +294,19 @@ def _runner(nodeids, run_id, headed=False, slowmo=0):
                      report=f"/reports/{report_name}", allure=allure_url)
         STATE["log"] += extra
         log = STATE["log"]
+    counts = _counts(log)
     _save_run(run_id, started, status, nodeids, f"/reports/{report_name}", log,
-              _counts(log), allure_url, returncode=code)
+              counts, allure_url, returncode=code)
+    return {
+        "runId": run_id, "status": status, "counts": counts,
+        "report": f"/reports/{report_name}", "allure": allure_url,
+        "cases": _parse_junit(junit_path, nodeids), "returncode": code,
+    }
+
+
+pipeline.configure(run_suite=_runner, discover=discover_cases, root=ROOT,
+                   meta_path=META_PATH, db_path=DB_PATH, state=STATE, lock=LOCK)
+pipeline.init_pipeline_db()
 
 
 @app.get("/api/cases")
@@ -429,6 +474,60 @@ def api_defects():
     }
 
 
+@app.post("/api/pipeline/start")
+async def api_pipeline_start(request: Request):
+    data = await request.json()
+    req = (data.get("requirement") or "").strip()
+    if not req:
+        return JSONResponse({"error": "请输入需求描述"}, status_code=400)
+    return {"id": pipeline.start(req)}
+
+
+@app.get("/api/pipeline/list")
+def api_pipeline_list():
+    return pipeline.list_pipelines()
+
+
+@app.get("/api/pipeline/{pid}")
+def api_pipeline_get(pid: str):
+    p = pipeline.get_pipeline(pid)
+    return p or JSONResponse({"error": "未找到流水线"}, status_code=404)
+
+
+@app.get("/api/bugs")
+def api_bugs(pipeline_id: str = None):
+    return pipeline.list_bugs(pipeline_id)
+
+
+@app.post("/api/bugs/{bid}/claim")
+async def api_bug_claim(bid: str, request: Request):
+    d = await request.json()
+    b = pipeline.claim_bug(bid, d.get("owner"))
+    return b or JSONResponse({"error": "未找到缺陷"}, status_code=404)
+
+
+@app.post("/api/bugs/{bid}/fix")
+async def api_bug_fix(bid: str, request: Request):
+    d = await request.json()
+    note = (d.get("note") or "").strip()
+    if not note:
+        return JSONResponse({"error": "请填写修复说明"}, status_code=400)
+    b = pipeline.submit_fix(bid, note, d.get("fixer"))
+    return b or JSONResponse({"error": "未找到缺陷"}, status_code=404)
+
+
+@app.post("/api/bugs/{bid}/verify")
+async def api_bug_verify(bid: str, request: Request):
+    d = await request.json()
+    b = pipeline.verify_bug(bid, bool(d.get("accept")), d.get("qa", "QA"), d.get("note", ""))
+    return b or JSONResponse({"error": "未找到缺陷"}, status_code=404)
+
+
+@app.get("/api/outbox")
+def api_outbox(pipeline_id: str = None):
+    return mailer.list_mails(pipeline_id=pipeline_id)
+
+
 def _ctx(request, page):
     return {
         "request": request,
@@ -466,3 +565,8 @@ def settings_page(request: Request):
 @app.get("/defects", response_class=HTMLResponse)
 def defects_page(request: Request):
     return templates.TemplateResponse(request=request, name="defects.html", context=_ctx(request, "defects"))
+
+
+@app.get("/pipeline", response_class=HTMLResponse)
+def pipeline_page(request: Request):
+    return templates.TemplateResponse(request=request, name="pipeline.html", context=_ctx(request, "pipeline"))

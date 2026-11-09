@@ -1,0 +1,16 @@
+{
+  "from": "zg-qa-platform@local",
+  "qa": {"name": "QA 测试台", "email": "qa@zhengguan.local"},
+  "leaders": [
+    {"name": "测试负责人", "email": "qa-lead@zhengguan.local"},
+    {"name": "技术负责人", "email": "tech-lead@zhengguan.local"}
+  ],
+  "routing": {
+    "视频与播放器": {"name": "视频前端 RD", "email": "rd-video@zhengguan.local"},
+    "接口与资源": {"name": "服务端 RD", "email": "rd-backend@zhengguan.local"},
+    "搜索": {"name": "搜索 RD", "email": "rd-search@zhengguan.local"},
+    "首页与导航": {"name": "前端 RD", "email": "rd-web@zhengguan.local"},
+    "页面与内容": {"name": "前端 RD", "email": "rd-web@zhengguan.local"},
+    "default": {"name": "值班 RD", "email": "rd-oncall@zhengguan.local"}
+  }
+}

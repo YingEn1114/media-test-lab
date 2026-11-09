@@ -10,3 +10,5 @@ screenshots/*.png
 allure-results/
 reports/allure-*/
 platform.db-*
+tests/generated/
+outbox/

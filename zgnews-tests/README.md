@@ -194,7 +194,30 @@ MeterSphere CE 不能直接执行 Playwright/Python UI 脚本。本平台是独�
 
 > 若 Git 仓库根是 `media-test-lab` 而不是 `zgnews-tests`，请把两个 workflow 移到仓库根 `.github/workflows/`，并给 job 加 `defaults.run.working-directory: zgnews-tests`。
 
-## 13. 参考与 Roadmap
+## 13. AI 测试流水线
+
+平台内置一条「需求 → 用例 → 执行 → 缺陷 → 修复 → 报告」的闭环，入口在左侧导航「AI 流水线」（`/pipeline`）。
+
+链路：**需求输入 → AI 写用例 → AI 评测 → 写入用例库（`tests/generated/`）→ 冒烟 → 全量 → 失败转缺陷并按测试域邮件通知 RD → RD 认领 → 提交修复+平台自回测 → QA 验收 → 全部关闭后出报告并抄送领导。**
+
+关键设计：
+
+- **AI 受限生成**：AI 只能从固定「检查工具箱」（首页可达 / 标题 / 关键词 / 路径状态码 / 元素存在 / 搜索不跳转）里选 kind + 参数，平台据此渲染固定模板的 pytest 文件，**不执行 AI 直接产出的任意代码**；
+- **离线可跑**：未配置 AI 时自动回退本地启发式生成/评测，整条链路离线可演示；
+- **自回测门禁**：RD 提交修复后平台立即重跑该用例，未通过不会流转到「待 QA 验收」；
+- **口径一致**：缺陷按测试域路由到对应 RD（见 `pipeline_config.json`）。
+
+环境变量（可选）：
+
+| 变量 | 说明 |
+|---|---|
+| `ZG_AI_BASE_URL` / `ZG_AI_KEY` / `ZG_AI_MODEL` | OpenAI 兼容接口；三者齐全时用真模型，否则本地回退 |
+| `ZG_SMTP_HOST` / `ZG_SMTP_PORT` / `ZG_SMTP_USER` / `ZG_SMTP_PASS` / `ZG_SMTP_TLS` | 配置后真实发信；默认把邮件落地到 `outbox/`（`.eml`）并在「发件箱」可查 |
+
+路由与收件人配置：`pipeline_config.json`（from / qa / leaders / 按测试域的 routing）。
+生成的用例文件与发件箱为运行时产物，已在 `.gitignore` 忽略。
+
+## 14. 参考与 Roadmap
 - [Playwright Python](https://github.com/microsoft/playwright-python)（15k stars）
 - [Chart.js](https://github.com/chartjs/Chart.js)（65k stars，本地 vendor）
 - [pytest-html](https://github.com/pytest-dev/pytest-html)（779 stars）
