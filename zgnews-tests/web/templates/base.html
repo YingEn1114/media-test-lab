@@ -9,7 +9,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23123b5e'/%3E%3Ctext x='16' y='21' font-size='11' fill='%23fff' text-anchor='middle' font-family='Helvetica,Arial'%3EZG%3C/text%3E%3C/svg%3E">
 <link rel="preload" href="/assets/fonts/plex-sans-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/app.css?v=0.12">
+<link rel="stylesheet" href="/assets/app.css?v=0.14">
 {% block head %}{% endblock %}
 </head>
 <body>
@@ -18,8 +18,7 @@
 <header class="masthead">
   <a class="brand" href="/" aria-label="ZG QA 测试执行台首页">
     <span class="brand-mark" aria-hidden="true">ZG</span>
-    <span class="brand-name">QA</span>
-    <span class="brand-sub">测试执行台</span>
+    <span class="brand-copy"><span class="brand-name">正观质量中心</span><span class="brand-sub">QUALITY CONTROL CENTER</span></span>
   </a>
   <div class="mast-meta">
     <span><b>被测</b>{{ base_url }}</span>
@@ -27,25 +26,32 @@
     <span><b>版本</b>v{{ version }}</span>
   </div>
   <div class="mast-right">
-    <span class="live"><i aria-hidden="true"></i>平台在线</span>
+    <span class="live"><i aria-hidden="true"></i><span>平台在线</span></span>
+    <span class="mast-user">QA OPERATIONS</span>
   </div>
 </header>
 
 <div class="shell">
   <aside class="index">
     <nav class="nav" aria-label="主导航">
-      <a class="nav-item {% if page == 'dashboard' %}active{% endif %}" href="/" {% if page == 'dashboard' %}aria-current="page"{% endif %}>总览</a>
-      <a class="nav-item {% if page == 'cases' %}active{% endif %}" href="/cases" {% if page == 'cases' %}aria-current="page"{% endif %}>用例库</a>
-      <a class="nav-item {% if page == 'pipeline' %}active{% endif %}" href="/pipeline" {% if page == 'pipeline' %}aria-current="page"{% endif %}>AI 流水线</a>
-      <a class="nav-item {% if page == 'runs' %}active{% endif %}" href="/runs" {% if page == 'runs' %}aria-current="page"{% endif %}>运行与日志</a>
-      <a class="nav-item {% if page == 'reports' %}active{% endif %}" href="/reports" {% if page == 'reports' %}aria-current="page"{% endif %}>测试报告</a>
-      <a class="nav-item {% if page == 'defects' %}active{% endif %}" href="/defects" {% if page == 'defects' %}aria-current="page"{% endif %}>已知问题</a>
-      <a class="nav-item {% if page == 'settings' %}active{% endif %}" href="/settings" {% if page == 'settings' %}aria-current="page"{% endif %}>环境与设置</a>
+      <div class="nav-section">工作台</div>
+      <a class="nav-item {% if page in ['dashboard','overview'] %}active{% endif %}" href="/"><span class="nav-icon">⌂</span><span>质量总览</span><span class="nav-arrow">›</span></a>
+      <div class="nav-section">质量流程</div>
+      <a class="nav-item {% if page == 'requirements' %}active{% endif %}" href="/requirements"><span class="nav-icon">01</span><span>需求文档</span><span class="nav-arrow">›</span></a>
+      <a class="nav-item {% if page == 'factory' %}active{% endif %}" href="/factory"><span class="nav-icon">02</span><span>AI 用例工厂</span><span class="nav-arrow">›</span></a>
+      <a class="nav-item {% if page == 'cases' %}active{% endif %}" href="/cases"><span class="nav-icon">03</span><span>正式用例库</span><span class="nav-arrow">›</span></a>
+      <a class="nav-item {% if page == 'runs' %}active{% endif %}" href="/runs"><span class="nav-icon">04</span><span>测试执行</span><span class="nav-arrow">›</span></a>
+      <a class="nav-item {% if page == 'defects' %}active{% endif %}" href="/defects"><span class="nav-icon">05</span><span>缺陷协同</span><span class="nav-arrow">›</span></a>
+      <a class="nav-item {% if page == 'reports' %}active{% endif %}" href="/reports"><span class="nav-icon">06</span><span>测试报告</span><span class="nav-arrow">›</span></a>
+      <div class="nav-section">平台管理</div>
+      <a class="nav-item {% if page == 'prompts' %}active{% endif %}" href="/prompts"><span class="nav-icon">P</span><span>Prompt 管理</span><span class="nav-arrow">›</span></a>
+      <a class="nav-item {% if page == 'outbox' %}active{% endif %}" href="/outbox"><span class="nav-icon">✉</span><span>发件箱</span><span class="nav-arrow">›</span></a>
+      <a class="nav-item {% if page == 'settings' %}active{% endif %}" href="/settings"><span class="nav-icon">⚙</span><span>环境与设置</span><span class="nav-arrow">›</span></a>
     </nav>
     <div class="index-foot">
-      <div class="index-label">被测目标</div>
+      <div class="index-label">当前工作环境</div>
       <a class="index-link" href="{{ base_url }}" target="_blank" rel="noreferrer">{{ base_url }}</a>
-      <div class="index-meta">Playwright / pytest / Allure<br>v{{ version }}</div>
+      <div class="index-meta"><span class="env-dot"></span>生产镜像 · 已连接<br>Playwright / pytest / Allure · v{{ version }}</div>
     </div>
   </aside>
 

@@ -223,6 +223,7 @@ def _write_cases(accepted, pid6):
 
 
 def start(requirement):
+    raise RuntimeError("旧流水线写入已停用；请使用需求中心和AI用例工厂")
     pid = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6]
     p = {"id": pid, "created": time.time(), "requirement": requirement,
          "status": "running", "stage": "queued", "source": None,
@@ -251,7 +252,9 @@ def _orchestrate(pid):
         ev = ai_client.evaluate_cases(req, specs)
         p["data"]["evaluation"] = ev
         accepted_names = {v["name"] for v in ev.get("verdicts", []) if v.get("accepted")}
-        accepted = [c for c in specs if c["name"] in accepted_names] or specs
+        accepted = [c for c in specs if c["name"] in accepted_names]
+        if not accepted:
+            raise RuntimeError("零用例通过评审，禁止回退或执行")
         _timeline(p, "evaluate", f"评测均分 {ev.get('overallScore')}，采纳 {len(accepted)} 条")
 
         # 3. 写入用例库
@@ -377,6 +380,7 @@ def submit_fix(bid, note, fixer=None):
 
 
 def verify_bug(bid, accept, qa="QA", note=""):
+    raise RuntimeError("旧verify已停用；QA必须通过执行中心独立真实回测")
     b = _load_bug(bid)
     if not b:
         return None

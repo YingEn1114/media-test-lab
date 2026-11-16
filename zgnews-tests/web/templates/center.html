@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}QA 检验台{% endblock %}
+{% block head %}<link rel="stylesheet" href="/assets/center.css?v=0.25">{% endblock %}
+{% block content %}
+<div id="qa-center" data-section="{{ section }}">
+  <div class="page-head"><div><h1 id="center-title">QA 检验台</h1><p class="sub" id="center-description">需求、用例、执行与交付证据关联工作台</p></div>
+    <button class="btn" id="reload">刷新</button></div>
+  <form id="login" class="card qa-login">
+    <label>访问令牌 <input id="token" type="password" autocomplete="off" placeholder="管理员签发的令牌" required></label>
+    <button class="btn primary" type="submit">登录</button><button class="btn" type="button" id="logout">退出</button><span id="identity"></span>
+  </form>
+  {% if section == 'requirements' %}
+  <p class="note">上传 TXT、Markdown 或 CSV 需求文档。系统提取正文后生成测试点和用例草稿，确认入库后会出现在正式用例库。</p>
+  {% elif section == 'factory' %}
+  <p class="note">草稿 → 代码同步 → 独立评审 → 人工确认入库。演示生成与真实 AI 结果分别标记。</p>
+  {% elif section == 'outbox' %}
+  <p class="note">邮件以本地发件箱模式保存，可预览和下载；当前不会向真实收件人发送。</p>
+  {% endif %}
+  <div id="notice" role="status" aria-live="polite"></div>
+  <div id="controls"></div>
+  <div id="workspace" class="qa-workspace" aria-busy="false">
+    <section id="listing" aria-label="记录列表"></section>
+    <section id="detail" aria-label="记录详情"><p class="empty">请登录后选择记录，查看详情和关联证据。</p></section>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/assets/center.js?v=0.25" defer></script>{% endblock %}

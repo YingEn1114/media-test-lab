@@ -19,6 +19,16 @@ CHECK_KINDS = {
     "path_status": ["path", "expect"],
     "element_present": ["selector", "min"],
     "search_no_redirect": ["query"],
+    "player_ready": [],
+    "player_play": [],
+    "player_pause": [],
+    "player_seek": ["seconds"],
+    "player_volume": ["level"],
+    "player_fullscreen": [],
+    "player_quality": ["label"],
+    "player_rate": ["rate"],
+    "media_range": [],
+    "viewport_overflow": ["width", "height"],
 }
 
 SYSTEM_PROMPT = (
@@ -49,7 +59,10 @@ def _chat(messages, temperature=0.2):
                "Content-Type": "application/json"}
     body = {"model": model, "messages": messages, "temperature": temperature,
             "response_format": {"type": "json_object"}}
-    resp = requests.post(url, headers=headers, json=body, timeout=60)
+    timeout = float(os.getenv("ZG_AI_TIMEOUT", "60"))
+    if not 0 < timeout <= 300:
+        raise ValueError("ZG_AI_TIMEOUT must be between 0 and 300 seconds")
+    resp = requests.post(url, headers=headers, json=body, timeout=timeout)
     resp.raise_for_status()
     content = resp.json()["choices"][0]["message"]["content"]
     return json.loads(content)
@@ -71,15 +84,83 @@ def _normalize(cases):
         if not _valid_check(c.get("check")):
             continue
         tags = list(dict.fromkeys(["generated", "ai"] + (c.get("tags") or [])))
+        kind = c["check"]["kind"]
+        params = c["check"].get("params") or {}
+        expected = c.get("expected_results") or c.get("expected") or _expected(kind, params)
+        steps = c.get("steps") or _steps(kind, params)
+        filled = []
+        if not c.get("goal"):
+            filled.append("goal")
+        if not c.get("preconditions"):
+            filled.append("preconditions")
+        if not c.get("steps"):
+            filled.append("steps")
+        if not (c.get("expected_results") or c.get("expected")):
+            filled.append("expected")
+        if not c.get("implementation"):
+            filled.append("implementation")
         out.append({
             "name": c.get("name") or "未命名用例",
-            "desc": c.get("desc", ""),
+            "desc": c.get("desc") or _description(kind, params),
+            "goal": c.get("goal") or _description(kind, params),
+            "preconditions": c.get("preconditions") or "测试环境可访问目标站点，页面为公开内容且无需登录。",
+            "steps": steps if isinstance(steps, list) else [str(steps)],
+            "expected_results": expected if isinstance(expected, list) else [str(expected)],
+            "expected": expected if isinstance(expected, list) else [str(expected)],
+            "test_type": c.get("test_type") or "http",
+            "target": c.get("target") or _target(kind, params),
+            "test_data": c.get("test_data") or json.dumps(params, ensure_ascii=False),
+            "cleanup": c.get("cleanup") or "只读检查，无需清理数据。",
+            "implementation": c.get("implementation") or f"由平台固定模板执行 {kind} 检查，不执行模型生成的任意代码。",
+            "risk": c.get("risk") or "页面结构、跳转策略或网络波动可能导致结果变化。",
+            "automation": True,
+            "smoke": bool(c.get("smoke") or "smoke" in tags),
             "priority": c.get("priority") if c.get("priority") in ("P0", "P1", "P2") else "P1",
             "area": c.get("area") or "AI 生成",
             "tags": tags,
-            "check": {"kind": c["check"]["kind"], "params": c["check"].get("params") or {}},
+            "system_filled": filled,
+            "test_point": c.get("name") or _description(kind, params),
+            "check": {"kind": kind, "params": params},
         })
     return out
+
+
+def _target(kind, params):
+    if kind == "path_status":
+        return params.get("path", "/")
+    if kind == "search_no_redirect":
+        return "/search"
+    return "/"
+
+
+def _description(kind, params):
+    return {
+        "home_reachable": "确认首页可以正常访问并返回成功状态。",
+        "title_contains": f"确认首页标题包含“{params.get('text', '')}”。",
+        "keyword_present": f"确认首页内容包含“{params.get('keyword', '')}”。",
+        "path_status": f"确认路径 {params.get('path', '/')} 返回预期状态码。",
+        "element_present": "确认目标页面包含要求的界面元素。",
+        "search_no_redirect": f"确认搜索“{params.get('query', '')}”不会异常跳转。",
+    }.get(kind, "确认需求中的可观测行为符合预期。")
+
+
+def _steps(kind, params):
+    if kind == "search_no_redirect":
+        return [f"使用关键词“{params.get('query', '')}”发起站内搜索。", "记录响应状态和跳转地址。"]
+    if kind == "path_status":
+        return [f"访问站内路径 {params.get('path', '/')}。", "记录 HTTP 响应状态码。"]
+    return ["打开目标站点首页。", "读取页面响应、标题和关键界面元素。"]
+
+
+def _expected(kind, params):
+    return {
+        "home_reachable": ["首页 HTTP 状态码为 200。"],
+        "title_contains": [f"首页标题包含“{params.get('text', '')}”。"],
+        "keyword_present": [f"首页 HTML 包含“{params.get('keyword', '')}”。"],
+        "path_status": [f"路径返回 HTTP {params.get('expect', 200)}。"],
+        "element_present": [f"选择器 {params.get('selector', '')} 的匹配数量不少于 {params.get('min', 1)}。"],
+        "search_no_redirect": ["搜索请求不被 302 重定向到下载页。"],
+    }.get(kind, ["检查结果与需求验收标准一致。"])
 
 
 def _local_generate(requirement):

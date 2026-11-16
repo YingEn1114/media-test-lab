@@ -1,4 +1,7 @@
 import os
+import hashlib
+import json
+from pathlib import Path
 
 import pytest
 import requests
@@ -9,6 +12,29 @@ BASE_URL = os.getenv("ZG_BASE_URL", "https://www.zhengguannews.cn")
 CHANNEL = os.getenv("ZG_CHANNEL", "chrome")
 HEADLESS = os.getenv("ZG_HEADLESS", "1").lower() not in ("0", "false", "no")
 SLOWMO = int(os.getenv("ZG_SLOWMO", "0"))
+
+
+def _generated_allowed(path):
+    try:
+        manifest = json.loads(os.getenv("ZG_QA_GENERATED_MANIFEST", "{}"))
+        return manifest.get(str(path.resolve())) == hashlib.sha256(path.read_bytes()).hexdigest()
+    except (ValueError, OSError):
+        return False
+
+
+def pytest_ignore_collect(collection_path, config):
+    generated = Path(__file__).resolve().parent / "tests" / "generated"
+    if collection_path == generated:
+        return not bool(os.getenv("ZG_QA_GENERATED_MANIFEST"))
+    if generated in collection_path.parents and collection_path.is_file() and collection_path.suffix == ".py":
+        return not _generated_allowed(collection_path)
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_pycollect_makemodule(module_path, parent):
+    generated = Path(__file__).resolve().parent / "tests" / "generated"
+    if generated in module_path.parents and not _generated_allowed(module_path):
+        raise pytest.UsageError("generated资产未绑定已发布评审及代码hash，禁止收集")
 
 
 @pytest.fixture(scope="session")

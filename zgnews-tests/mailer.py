@@ -1,8 +1,6 @@
 """邮件发件箱：默认把邮件渲染成 .eml 落地 outbox/ 并写入 mails 表（模拟发送）。
 
-若设置了 SMTP 环境变量（ZG_SMTP_HOST 等），则改为真实发送：
-    ZG_SMTP_HOST / ZG_SMTP_PORT / ZG_SMTP_USER / ZG_SMTP_PASS / ZG_SMTP_TLS=1
-未设置时只落地，不联网，便于演示与离线。
+本产品版本始终只落地，不因 SMTP 环境存在而外发。
 """
 import json
 import os
@@ -93,14 +91,6 @@ def send(to, subject, body, cc=None, pipeline_id=None, bug_id=None):
     msg.set_content(body)
 
     transport = "outbox"
-    if os.getenv("ZG_SMTP_HOST"):
-        try:
-            _smtp_send(msg)
-            transport = "smtp"
-        except Exception as exc:  # 真发失败也落地，保证链路不断
-            body = body + f"\n\n[SMTP 发送失败，已落地到发件箱] {exc}"
-            msg.set_content(body)
-
     mid = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6]
     eml_name = f"{mid}-{_slug(subject)}.eml"
     eml_path = os.path.join(OUTBOX, eml_name)

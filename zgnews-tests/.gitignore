@@ -10,5 +10,9 @@ screenshots/*.png
 allure-results/
 reports/allure-*/
 platform.db-*
-tests/generated/
 outbox/
+*.admin-token
+*.assets.git/
+*.bak
+tests/generated/
+.env

@@ -1,5 +1,62 @@
 # 正观新闻 Python UI 自动化测试
 
+> 产品化升级入口已替换旧流水线。下方早期运行记录仅作历史背景；当前鉴权、门禁、邮件与 API 以本节及 `MIGRATION.md`、`QA_API.md` 为准。
+
+## 当前版本：QA 检验台
+
+独立入口：总览 `/`、需求 `/requirements`、AI 工厂 `/factory`、Prompt `/prompts`、正式库 `/cases`、执行 `/runs`、缺陷 `/defects`、报告 `/reports`、发件箱 `/outbox`、设置 `/settings`；升级前数据在 `/history` 只读查看。`/pipeline` 进入新工厂，旧写入 API 返回 410。
+
+本轮交付与尚未完成的扩展逐项列在 [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)，不要将完整需求中的所有细项视为已经实现。
+
+启动示例（先在项目目录运行，以下路径均相对于当前项目）：
+
+```bash
+ZG_DB=/tmp/zgqa-demo.db \
+ZG_ADMIN_TOKEN='替换为至少32字符的随机令牌' \
+ZG_HOST=127.0.0.1 ZG_PORT=8092 ./start.sh
+```
+
+未设置 `ZG_ADMIN_TOKEN` 且数据库尚无用户时，平台在 `<ZG_DB>.admin-token` 创建权限 `0600` 的本机管理员令牌文件，并在启动日志中打印位置。页面填写令牌登录；API 使用 `Authorization: Bearer <token>`。管理员在设置页创建 QA、RD、viewer 账号，令牌仅显示一次，数据库只存哈希。角色不能通过前端 role 参数冒充。旧 `ZG_AUTH` 可继续保护页面，但 `/api/qa/` 单独使用 Bearer，不需要同时提交 Basic。此最小认证适用于可信本机/团队环境，尚未接入企业 SSO、令牌轮换或找回。
+
+AI 配置只在服务端提供，设置页显示掩码。完整环境变量示例见 [.env.example](.env.example)，示例文件不会自动加载；`ZG_AI_TIMEOUT` 默认 60 秒，可配置到 300 秒。
+
+管理员还可创建测试负责人、技术负责人和项目负责人账号；这些角色可以查看工作与质量证据，不能修改测试或缺陷状态。Prompt 管理支持创建新版本、启用历史版本回滚，回滚后再次保存仍使用递增版本号，不覆盖历史。
+
+```bash
+ZG_AI_BASE_URL=https://your-compatible-provider.example/v1 \
+ZG_AI_KEY='your-secret' ZG_AI_MODEL='your-model' \
+ZG_DB=/tmp/zgqa-demo.db ./start.sh
+```
+
+未配置 AI：真实生成和评审明确返回未配置；可选择“本地规则演示”生成设计草稿，来源为 `demo-local-rules`，绝不以本地规则自动评分通过。调用失败不静默降级。生成与独立评审分别使用可版本化 Prompt；默认六类为 generation、review、summary、report、email、defect（缺陷通知）。摘要、报告和邮件当前使用真实证据固定模板，记录对应 Prompt 版本，**不声称已经调用模型撰写报告/邮件**。
+
+操作闭环：
+
+1. 需求中心填写标题、描述、验收标准、负责人、范围、域和风险。
+2. 工厂生成草稿，可编辑目标、前置条件、步骤、预期、测试类型、smoke、automation、实现及风险；保存新版本即使代码未变也需重审。手工设计可保留，不能发布为自动执行用例。当前自动化执行只支持六类受限 HTTP/HTML 检查，不执行模型给出的 Python。
+3. “查看代码 / diff”预览；“同步代码到本地 Git”真实提交当前一份 generated 版本资产，记录 commit、hash、diff。默认独立 bare 仓库为 `<ZG_DB>.assets.git`，可用 `ZG_ASSET_REPO` 指向专用资产仓库；隔离 index 精确提交选定文件，不改变本项目 HEAD、用户 index 或其他改动，不 push。
+4. 独立 AI 评审使用八维规则，后端重算加权总分；至少 80 分、前四维至少 70，blocking、安全问题、重复、环境阻碍、证据缺口均拒绝。逐条问题含位置、理由与建议。人工确认绑定草稿版本、需求版本、评审、代码 hash、commit；零通过不入库。
+5. 执行中心支持 full、smoke、selected/scope、requirement、area、priority、tag。full 包含当前所有正式人工及生成用例，过期资产阻止启动而非被静默漏掉。结果要求 JUnit 精确覆盖每一 nodeid、无重复/未知项、有效退出码且未取消；普通执行保留 xfail 单列，修复回测必须全部实 pass。
+6. 失败创建 UUID 缺陷，按管理员域路由关联 RD。配置 RD 邮箱后真正生成 DB 发件箱通知；缺少邮箱时显示 `needs-recipient`。RD 只看到分配/认领缺陷及关联用例、需求、回测，不能读取评审/代码同步/邮件或取消别人的运行。
+7. RD 提交 commit/PR 与说明后实际自回测，通过才待 QA；独立 QA 再实际回测通过为 fixed，验收者才能关闭。失败、skip、xfail、缺失 JUnit 均不能算修复。修复 commit/PR 是用户提供的证明，平台不访问远程验证其业务内容。
+8. 完成的全量 run 生成不可变快照；失败也可生成风险报告。未解决 P0/P1 必须标风险。邮件默认收件人/抄送来自设置，可编辑正文，但 `.eml` 总附后端不可移除的证据风险摘要。有更新全量 run 后旧报告邮件不能再发送，只可归档。发送只表示写入本地 outbox，**任何 SMTP 环境配置都不会触发真实外发**。
+
+SQLite 使用 WAL、15 秒 busy timeout、写事务、schema 迁移记录和操作审计。运行槽在同一事务中占用，保存 PID/进程 UUID/主机；启动仅自动回收本机已死亡进程的槽，标记 aborted 并审计。未知旧槽或异机槽需管理员调用恢复接口并填写原因；活 PID 拒绝抢占。PID 被复用时采取保守策略，不会自动抢锁。
+
+验证命令：
+
+```bash
+.venv/bin/python -m pytest platform-tests -q
+# 若 PATH 没有 node，可使用本项目 Playwright 自带的 Node：
+.venv/lib/python3.9/site-packages/playwright/driver/node --check web/assets/center.js
+```
+
+独立测试使用临时 DB、代码目录、独立资产 Git、stub AI/runner，以及仅监听 127.0.0.1 的假 HTTP/API，不运行原站。迁移/备份见 `MIGRATION.md`，请求格式、状态流转及示例见 `QA_API.md`。
+
+生成资产可通过 `ZG_GIT_REPO` 指定专用本地 bare 仓库路径（`ZG_ASSET_REPO` 优先）；初建分支使用 `ZG_GIT_BRANCH`，作者使用 `ZG_GIT_AUTHOR_NAME` / `ZG_GIT_AUTHOR_EMAIL`。普通工作仓库的 `.git` 会被拒绝。生成文件在主工程中忽略，但会由独立资产仓库版本化，不触碰平台开发代码的提交。
+
+浏览器验收脚本在工作区根目录：`verify_upgrade_ui.py` 检查全部导航的桌面/移动布局，`verify_upgrade_flow.py` 验证隔离服务中的需求、草稿、同步和单条运行选择。验收结果保存到 `reports/`，不提交凭据或运行数据库。
+
 ## 1. 背景
 参考 `../metersphere-3.x/unit58框架代码`（Selenium + unittest + Excel + HTMLTestRunner）。该框架是 Windows 环境（`D:\Python312`、`chromedriver.exe`），Mac 不能直接跑。
 
@@ -194,28 +251,9 @@ MeterSphere CE 不能直接执行 Playwright/Python UI 脚本。本平台是独�
 
 > 若 Git 仓库根是 `media-test-lab` 而不是 `zgnews-tests`，请把两个 workflow 移到仓库根 `.github/workflows/`，并给 job 加 `defaults.run.working-directory: zgnews-tests`。
 
-## 13. AI 测试流水线
+## 13. 旧 AI 流水线（历史说明，写入已停用）
 
-平台内置一条「需求 → 用例 → 执行 → 缺陷 → 修复 → 报告」的闭环，入口在左侧导航「AI 流水线」（`/pipeline`）。
-
-链路：**需求输入 → AI 写用例 → AI 评测 → 写入用例库（`tests/generated/`）→ 冒烟 → 全量 → 失败转缺陷并按测试域邮件通知 RD → RD 认领 → 提交修复+平台自回测 → QA 验收 → 全部关闭后出报告并抄送领导。**
-
-关键设计：
-
-- **AI 受限生成**：AI 只能从固定「检查工具箱」（首页可达 / 标题 / 关键词 / 路径状态码 / 元素存在 / 搜索不跳转）里选 kind + 参数，平台据此渲染固定模板的 pytest 文件，**不执行 AI 直接产出的任意代码**；
-- **离线可跑**：未配置 AI 时自动回退本地启发式生成/评测，整条链路离线可演示；
-- **自回测门禁**：RD 提交修复后平台立即重跑该用例，未通过不会流转到「待 QA 验收」；
-- **口径一致**：缺陷按测试域路由到对应 RD（见 `pipeline_config.json`）。
-
-环境变量（可选）：
-
-| 变量 | 说明 |
-|---|---|
-| `ZG_AI_BASE_URL` / `ZG_AI_KEY` / `ZG_AI_MODEL` | OpenAI 兼容接口；三者齐全时用真模型，否则本地回退 |
-| `ZG_SMTP_HOST` / `ZG_SMTP_PORT` / `ZG_SMTP_USER` / `ZG_SMTP_PASS` / `ZG_SMTP_TLS` | 配置后真实发信；默认把邮件落地到 `outbox/`（`.eml`）并在「发件箱」可查 |
-
-路由与收件人配置：`pipeline_config.json`（from / qa / leaders / 按测试域的 routing）。
-生成的用例文件与发件箱为运行时产物，已在 `.gitignore` 忽略。
+旧版本的自动串行流水线现已拆成独立模块。`/pipeline` 转入 AI 用例工厂，旧流水线和邮件记录通过 `/history` 查阅。当前人员路由与收件人在“环境与设置”管理，配置存入数据库，不再使用旧 `pipeline_config.json` 驱动新模块。请按本文顶部的新流程操作。
 
 ## 14. 参考与 Roadmap
 - [Playwright Python](https://github.com/microsoft/playwright-python)（15k stars）

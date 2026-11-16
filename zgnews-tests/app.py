@@ -14,6 +14,8 @@ import uuid
 
 import mailer
 import pipeline
+from qa_center.service import Center
+from qa_center.web import install as install_center
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -42,6 +44,8 @@ templates = Jinja2Templates(directory=os.path.join(ROOT, "web", "templates"))
 
 @app.middleware("http")
 async def basic_auth(request: Request, call_next):
+    if getattr(request, "url", None) and request.url.path.startswith("/api/qa/"):
+        return await call_next(request)
     if not AUTH:
         return await call_next(request)
     header = request.headers.get("authorization", "")
@@ -229,7 +233,7 @@ def _parse_junit(path, nodeids):
     return results
 
 
-def _runner(nodeids, run_id, headed=False, slowmo=0):
+def _runner(nodeids, run_id, headed=False, slowmo=0, manifest=None):
     report_name = f"report-{run_id}.html"
     report_path = os.path.join(REPORT_DIR, report_name)
     junit_path = os.path.join(REPORT_DIR, f"junit-{run_id}.xml")
@@ -249,6 +253,7 @@ def _runner(nodeids, run_id, headed=False, slowmo=0):
     env = os.environ.copy()
     env["ZG_HEADLESS"] = "0" if headed else "1"
     env["ZG_SLOWMO"] = str(slowmo)
+    env["ZG_QA_GENERATED_MANIFEST"] = json.dumps(manifest or {})
     try:
         proc = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, text=True, bufsize=1,
@@ -295,18 +300,30 @@ def _runner(nodeids, run_id, headed=False, slowmo=0):
         STATE["log"] += extra
         log = STATE["log"]
     counts = _counts(log)
+    from qa_center.evidence import inspect
+    try:
+        with open(junit_path, encoding="utf-8") as evidence_file:
+            junit = evidence_file.read()
+    except OSError:
+        junit = ""
+    evidence = inspect({"junit": junit, "returncode": code, "status": status}, nodeids)
+    status = evidence["status"]
+    with LOCK:
+        STATE["status"] = status
     _save_run(run_id, started, status, nodeids, f"/reports/{report_name}", log,
               counts, allure_url, returncode=code)
     return {
         "runId": run_id, "status": status, "counts": counts,
         "report": f"/reports/{report_name}", "allure": allure_url,
         "cases": _parse_junit(junit_path, nodeids), "returncode": code,
+        "junit": junit,
     }
 
 
 pipeline.configure(run_suite=_runner, discover=discover_cases, root=ROOT,
                    meta_path=META_PATH, db_path=DB_PATH, state=STATE, lock=LOCK)
 pipeline.init_pipeline_db()
+mailer.DB_PATH = DB_PATH
 
 
 @app.get("/api/cases")
@@ -344,6 +361,7 @@ async def api_run(request: Request):
         if STATE["status"] == "running":
             return JSONResponse({"error": "已有任务在运行"}, status_code=409)
         run_id = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6]
+        STATE.update(status="running", runId=run_id, nodeids=ids)
     headed = bool(data.get("headed"))
     slowmo = int(data.get("slowmo") or (300 if headed else 0))
     threading.Thread(target=_runner, args=(ids, run_id, headed, slowmo), daemon=True).start()
@@ -539,34 +557,43 @@ def _ctx(request, page):
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request):
-    return templates.TemplateResponse(request=request, name="dashboard.html", context=_ctx(request, "dashboard"))
+    return center_page(request, "overview")
 
 
 @app.get("/cases", response_class=HTMLResponse)
 def cases_page(request: Request):
-    return templates.TemplateResponse(request=request, name="cases.html", context=_ctx(request, "cases"))
+    return center_page(request, "cases")
 
 
 @app.get("/runs", response_class=HTMLResponse)
 def runs_page(request: Request):
-    return templates.TemplateResponse(request=request, name="runs.html", context=_ctx(request, "runs"))
+    return center_page(request, "runs")
 
 
 @app.get("/reports", response_class=HTMLResponse)
 def reports_page(request: Request):
-    return templates.TemplateResponse(request=request, name="reports.html", context=_ctx(request, "reports"))
+    return center_page(request, "reports")
 
 
 @app.get("/settings", response_class=HTMLResponse)
 def settings_page(request: Request):
-    return templates.TemplateResponse(request=request, name="settings.html", context=_ctx(request, "settings"))
+    return center_page(request, "settings")
 
 
 @app.get("/defects", response_class=HTMLResponse)
 def defects_page(request: Request):
-    return templates.TemplateResponse(request=request, name="defects.html", context=_ctx(request, "defects"))
+    return center_page(request, "defects")
 
 
 @app.get("/pipeline", response_class=HTMLResponse)
 def pipeline_page(request: Request):
-    return templates.TemplateResponse(request=request, name="pipeline.html", context=_ctx(request, "pipeline"))
+    return center_page(request, "factory")
+
+
+def center_page(request, section):
+    return templates.TemplateResponse(request=request, name="center.html",
+                                      context={**_ctx(request, section), "section": section})
+
+
+CENTER = Center(DB_PATH, ROOT, _runner, cancel=api_cancel)
+install_center(app, CENTER, templates, _ctx)
