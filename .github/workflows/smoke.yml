@@ -15,6 +15,10 @@ concurrency:
   group: zgnews-smoke
   cancel-in-progress: false
 
+defaults:
+  run:
+    working-directory: zgnews-tests
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
@@ -29,6 +33,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+          cache-dependency-path: zgnews-tests/requirements.txt
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Install Chromium
@@ -43,5 +48,5 @@ jobs:
         with:
           name: smoke-report
           path: |
-            reports/smoke.html
-            screenshots/
+            zgnews-tests/reports/smoke.html
+            zgnews-tests/screenshots/
